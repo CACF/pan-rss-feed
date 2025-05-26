@@ -1,12 +1,12 @@
+from app.reutersblc.reuters_feed_processor import run_reuters_feed_pipeline
 import os
 import uvicorn
 from fastapi import Body
 from mangum import Mangum
 from fastapi import FastAPI
-from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
-
-load_dotenv()
+from app.reutersblc.reuters_topics import TOPICS_BY_GENRE
+from typing import Dict, Any
 from app.utils.feed_urls import feed_urls
 from app.feed_blc import feed_starter
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,6 +47,48 @@ def get_genres():
             all_genres.add(single_url.get("genre"))
 
     return {"genres": list(all_genres)}
+
+
+@app.get("/reuters")
+def get_reuters_topics(data: Dict[str, Any]) -> Dict[str, Any]:
+    sources = data.get("sources", ["Reuters"])
+    genres = data.get("genres")
+
+    if "reuters" not in [source.lower() for source in sources]:
+        return {"error": "Only 'Reuters' source is supported."}
+
+    if not genres:
+        return TOPICS_BY_GENRE
+
+    return {
+        genre: TOPICS_BY_GENRE[genre] for genre in genres if genre in TOPICS_BY_GENRE
+    }
+
+
+@app.post("/reuters")
+async def start_reuters_feed(data_dict: dict = Body(..., example={"genres": []})):
+    try:
+        genres = data_dict.get("genres")
+        if not genres:
+            genres = list(TOPICS_BY_GENRE.keys())
+
+        elif isinstance(genres, str):
+            genres = [genres]
+
+        await run_reuters_feed_pipeline({"genres": genres})
+
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": "success",
+                "message": f"Reuters feed ingested successfully for genres: {genres}",
+            },
+        )
+    except Exception as ex:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "failed", "error": str(ex)},
+        )
 
 
 @app.post("/ingest")
