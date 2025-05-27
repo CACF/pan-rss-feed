@@ -1,5 +1,4 @@
-from app.reutersblc.reuters_feed_processor import run_reuters_feed_pipeline
-import os
+from app.reutersblc.reuters_feed_processor import ReutersRSSPipeline
 import uvicorn
 from fastapi import Body
 from mangum import Mangum
@@ -10,6 +9,7 @@ from typing import Dict, Any
 from app.utils.feed_urls import feed_urls
 from app.feed_blc import feed_starter
 from fastapi.middleware.cors import CORSMiddleware
+from config import settings
 
 app = FastAPI()
 
@@ -75,7 +75,7 @@ async def start_reuters_feed(data_dict: dict = Body(..., example={"genres": []})
         elif isinstance(genres, str):
             genres = [genres]
 
-        await run_reuters_feed_pipeline({"genres": genres})
+        await ReutersRSSPipeline.run_pipeline({"genres": genres})
 
         return JSONResponse(
             status_code=200,
@@ -127,7 +127,7 @@ def get_sources_with_genres():
 if __name__ == "__main__":
     uvicorn.run(
         "run:app",
-        host=os.environ.get("HOST"),
-        port=int(os.environ.get("PORT")),
-        reload=True if os.environ.get("ENVIRONMENT") == "development" else False,
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.ENVIRONMENT == "development",
     )
