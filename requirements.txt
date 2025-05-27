@@ -1,11 +1,16 @@
 requests
-bs4
+beautifulsoup4
 feedparser
 arrow
 pymongo
+motor
 unidecode
 python-dotenv
 fastapi
 uvicorn
 mangum
 zenrows
+lxml
+dnspython
+pydantic
+pydantic-settings
