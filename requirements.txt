@@ -14,3 +14,4 @@ lxml
 dnspython
 pydantic
 pydantic-settings
+dateparser

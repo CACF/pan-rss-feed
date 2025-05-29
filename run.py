@@ -2,10 +2,10 @@ from app.reutersblc.reuters_feed_processor import ReutersRSSPipeline
 import uvicorn
 from fastapi import Body
 from mangum import Mangum
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 from app.reutersblc.reuters_topics import TOPICS_BY_GENRE
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional, Dict
 from app.utils.feed_urls import feed_urls
 from app.feed_blc import feed_starter
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,11 +49,11 @@ def get_genres():
     return {"genres": list(all_genres)}
 
 
-@app.get("/reuters")
-def get_reuters_topics(data: Dict[str, Any]) -> Dict[str, Any]:
-    sources = data.get("sources", ["Reuters"])
-    genres = data.get("genres")
-
+@app.get("/reuters/genres")
+def get_reuters_topics(
+    sources: Optional[List[str]] = Query(default=["Reuters"]),
+    genres: Optional[List[str]] = Query(default=None),
+) -> Dict[str, Any]:
     if "reuters" not in [source.lower() for source in sources]:
         return {"error": "Only 'Reuters' source is supported."}
 

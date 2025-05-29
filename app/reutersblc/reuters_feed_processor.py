@@ -187,7 +187,7 @@ class ReutersRSSPipeline:
         for genre_key in input_data["genres"]:
             topic_entries = TOPICS_BY_GENRE.get(genre_key)
             if not topic_entries:
-                print(f"⚠️ Genre '{genre_key}' not found.")
+                print(f"Genre '{genre_key}' not found.")
                 continue
             for topic_dict in topic_entries:
                 for topic_code in topic_dict:
