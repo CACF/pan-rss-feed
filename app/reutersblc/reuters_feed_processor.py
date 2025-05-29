@@ -61,6 +61,7 @@ class ReutersRSSPipeline:
         params.append(f"limit={limit}")
         params.append(f"maxAge={max_age}")
         params.append(f"linkType={link_type}")
+
         return f"{base_url}?{'&'.join(params)}"
 
     @staticmethod
@@ -105,7 +106,7 @@ class ReutersRSSPipeline:
                             if pub_date_str
                             else None
                         )
-
+                        content = ""
                         media_text = item.find("media:text")
                         if media_text and media_text.get("type") == "html":
                             content_html = media_text.text or ""
@@ -114,15 +115,8 @@ class ReutersRSSPipeline:
                                 .get_text(separator=" ")
                                 .strip()
                             )
-                        else:
-                            desc_tag = item.find("description")
-                            content = (
-                                desc_tag.text.strip()
-                                if desc_tag and desc_tag.text
-                                else ""
-                            )
 
-                        if not content:
+                        if not content or len(content.split()) < 200:
                             continue
 
                         article = {
