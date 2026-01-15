@@ -1,3 +1,8 @@
+Flask==3.0.0
+flask-cors==4.0.0
+flask-pymongo==2.3.0
+webargs==8.3.0
+marshmallow==3.20.1
 requests
 bs4
 feedparser
@@ -9,3 +14,9 @@ fastapi
 uvicorn
 mangum
 zenrows
+cloudscraper==1.2.71
+selenium==4.21.0
+webdriver-manager==4.0.2
+lxml==5.2.1
+xmltodict
+fake-useragent
