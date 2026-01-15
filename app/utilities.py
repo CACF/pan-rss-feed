@@ -39,7 +39,7 @@ class MongoDBClient:
 
 
     @staticmethod
-    def insert_articles_to_mongo(article_list, user_email=None, collection_name="DemoNews"):
+    def insert_articles_to_mongo(article_list, user_email=None, collection_name="News"):
         if not article_list:
             return {"inserted_count": 0, "total_articles": 0}
 
