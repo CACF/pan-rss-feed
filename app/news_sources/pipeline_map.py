@@ -13,6 +13,11 @@ from app.news_sources.rss_sources.trb import TribuneRSSPipeline
 from app.news_sources.rss_sources.WSJ import WSJRSSPipeline
 from app.news_sources.scraper_sources.mttg import MettisglobalBusinessScraper
 from app.news_sources.scraper_sources.tfd import FinancialDailyBusinessPipeline
+from app.news_sources.rss_sources.exp_pk import ExpressUrduBusinessRSSPipeline
+from app.news_sources.rss_sources.aaj import AajTVBusinessRSSPipeline
+from app.news_sources.rss_sources.bol import BOLNewsBusinessRSSPipeline
+from app.news_sources.rss_sources.tc import TradeChronicleRSSPipeline
+from app.news_sources.rss_sources.propak import ProPakistaniBusinessRSSPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +37,12 @@ PIPELINE_MAP = {
     "pp" : ProfitPakistanTodayRSSPipeline,
     "dp" : DailyPakistanBusinessRSSPipeline,
     "ary" : ARYNewsBusinessRSSPipeline,
-    "geo" : GeoNewsBusinessRSSPipeline
+    "geo" : GeoNewsBusinessRSSPipeline,
+    "exp_pk" : ExpressUrduBusinessRSSPipeline,
+    "aaj" : AajTVBusinessRSSPipeline,
+    "bol" : BOLNewsBusinessRSSPipeline,
+    "tc" : TradeChronicleRSSPipeline,
+    "propak" : ProPakistaniBusinessRSSPipeline
+    
     
 }
