@@ -1,3 +1,4 @@
+import random
 import uuid
 import time
 import logging
@@ -63,35 +64,48 @@ class BBCRSSPipeline:
         full_description = None
         author = "Unknown"
         try:
+            time.sleep(random.uniform(1.5, 3.5))
+
             with cloudscraper.create_scraper() as scraper:
-                res = scraper.get(link, timeout=15, headers=get_random_headers(BBCRSSPipeline.headers))
+                res = scraper.get(
+                    link,
+                    timeout=15,
+                    headers=get_random_headers(BBCRSSPipeline.headers)
+                )
                 try:
                     if res.status_code != 200:
                         return None, author
 
                     soup = BeautifulSoup(res.content, "lxml")
+
                     author_elem = soup.find("span", class_="ssrcss-1rv0g9w-Contributor")
                     if author_elem:
                         author = author_elem.get_text(strip=True)
 
-                    paragraphs = soup.select("div.sc-3b6b161a-0 p")
-                    text_parts = [re.sub(r"http\S+|www\.\S+", "", p.get_text(strip=True)) for p in paragraphs]
+                    paragraphs = soup.select("article p")
+                    text_parts = [
+                        re.sub(r"http\S+|www\.\S+", "", p.get_text(strip=True))
+                        for p in paragraphs
+                    ]
                     text_parts = [t for t in text_parts if t]
 
                     if text_parts:
                         full_text = " ".join(text_parts)
                         if len(full_text) < 200:
                             return None, author
-                        # Limit to 200 words max
+
                         words = full_text.split()
                         if len(words) > 200:
-                            full_text = " ".join(words[:200])
+                            full_text = " ".join(words)
+
                         full_description = full_text
                 finally:
                     res.close()
         except Exception as e:
             logger.warning(f"Failed to fetch full description from {link}: {e}")
+
         return full_description, author
+
 
     @staticmethod
     def fetch_bbc_rss_feed(feed_url):

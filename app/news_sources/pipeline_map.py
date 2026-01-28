@@ -18,12 +18,12 @@ from app.news_sources.rss_sources.aaj import AajTVBusinessRSSPipeline
 from app.news_sources.rss_sources.bol import BOLNewsBusinessRSSPipeline
 from app.news_sources.rss_sources.tc import TradeChronicleRSSPipeline
 from app.news_sources.rss_sources.propak import ProPakistaniBusinessRSSPipeline
+from app.news_sources.rss_sources.jang import JangBusinessRSSPipeline
+from app.news_sources.rss_sources.cd import CoinDeskRSSPipeline
 
 logger = logging.getLogger(__name__)
 
 PIPELINE_MAP = {
-    # "Reuters": ReutersRSSPipeline,
-    # "APP NEWS": APPNewsPipeline,
     "BBC": BBCRSSPipeline,
     "WSJ": WSJRSSPipeline,
     "PBC": PBCNewsRSSPipeline,
@@ -32,9 +32,9 @@ PIPELINE_MAP = {
     "CNBC" : CNBCRSSPipeline,
     "mttg" : MettisglobalBusinessScraper,
     "trb" : TribuneRSSPipeline,
-    "br" : BusinessRecorderRSSPipeline,
+    # "br" : BusinessRecorderRSSPipeline,
     "dn" : DawnRSSPipeline,
-    "pp" : ProfitPakistanTodayRSSPipeline,
+    # "pp" : ProfitPakistanTodayRSSPipeline,
     "dp" : DailyPakistanBusinessRSSPipeline,
     "ary" : ARYNewsBusinessRSSPipeline,
     "geo" : GeoNewsBusinessRSSPipeline,
@@ -42,7 +42,7 @@ PIPELINE_MAP = {
     "aaj" : AajTVBusinessRSSPipeline,
     "bol" : BOLNewsBusinessRSSPipeline,
     "tc" : TradeChronicleRSSPipeline,
-    "propak" : ProPakistaniBusinessRSSPipeline
-    
-    
+    "propak" : ProPakistaniBusinessRSSPipeline,
+    "jang" : JangBusinessRSSPipeline,
+    "cd" : CoinDeskRSSPipeline
 }

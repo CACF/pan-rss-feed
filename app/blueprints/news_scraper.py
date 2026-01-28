@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from flask import Blueprint, jsonify, request
 from app.news_sources.pipeline_map import PIPELINE_MAP
@@ -9,8 +10,8 @@ bp = Blueprint("news_scraper", __name__)
 
 
 @bp.route("/run_scrapers", methods=["POST"])
-def run_scrapers():
-    """Run all requested news scraping pipelines concurrently.
+async def run_scrapers():
+    """Run all requested news scraping pipelines concurrently using asyncio.
 
     Request JSON (optional):
     {
@@ -36,7 +37,7 @@ def run_scrapers():
         return jsonify({"error": "No valid sources provided"}), 400
 
     logger.info(f"Starting concurrent scraping for sources: {sources}")
-    results = run_pipelines_concurrently(
+    results = await run_pipelines_concurrently(
         sources=sources,
         input_data=input_data,
         timeout_seconds=timeout_seconds,

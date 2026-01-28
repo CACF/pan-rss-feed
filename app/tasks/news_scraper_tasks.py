@@ -1,7 +1,7 @@
+import asyncio
 import logging
 import os
 import time
-import concurrent.futures
 from datetime import datetime, timezone
 from app.news_sources.pipeline_map import PIPELINE_MAP
 
@@ -178,14 +178,14 @@ def run_immediate_scraping(sources=None, user_id=None):
     )
 
 
-def run_pipelines_concurrently(sources=None, input_data=None, timeout_seconds=None, max_workers=None):
-    """Run specified pipelines concurrently using threads and return structured results.
+async def run_pipelines_concurrently(sources=None, input_data=None, timeout_seconds=None, max_workers=None):
+    """Run specified pipelines concurrently using asyncio and return structured results.
 
     Args:
         sources (list[str]|None): Source names to run. If None, run all in PIPELINE_MAP.
         input_data (dict|None): Payload to forward to each pipeline's run_pipeline.
         timeout_seconds (float|int|None): Optional timeout for all pipelines.
-        max_workers (int|None): Optional cap on thread workers.
+        max_workers (int|None): Not used in asyncio version (kept for API compatibility).
 
     Returns:
         dict: { source: {inserted_count, total_articles} | {error}, execution_time }
@@ -200,29 +200,83 @@ def run_pipelines_concurrently(sources=None, input_data=None, timeout_seconds=No
     start_time = time.perf_counter()
     results = {}
 
-    workers = max_workers if max_workers else (min(10, len(sources)) or 1)
+    async def _run_single_pipeline(source_name: str):
+        """Run a single pipeline asynchronously and safely."""
+        try:
+            pipeline_class = PIPELINE_MAP.get(source_name)
+            if not pipeline_class:
+                return {"error": f"Source {source_name} not found"}
+            
+            logger.info(f"Submitting pipeline: {source_name}")
+            
+            # Run the synchronous pipeline in a thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, pipeline_class.run_pipeline, input_payload)
+        except Exception as e:
+            logger.exception(f"Error executing pipeline for {source_name}: {e}")
+            return {"error": str(e)}
 
-    def _run_single_pipeline(source_name: str):
-        pipeline_class = PIPELINE_MAP[source_name]
-        logger.info(f"Submitting pipeline: {source_name}")
-        return pipeline_class.run_pipeline(input_payload)
+    # Create tasks for all pipelines
+    tasks = {
+        asyncio.create_task(_run_single_pipeline(source)): source 
+        for source in sources
+    }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-        future_to_source = {
-            executor.submit(_run_single_pipeline, source): source for source in sources
-        }
+    # Handle timeout if specified
+    if timeout_seconds and isinstance(timeout_seconds, (int, float)) and timeout_seconds > 0:
+        try:
+            # Wait for all tasks with timeout
+            done, pending = await asyncio.wait(
+                tasks.keys(), 
+                timeout=timeout_seconds,
+                return_when=asyncio.ALL_COMPLETED
+            )
+            
+            # Process completed tasks
+            for task in done:
+                source = tasks[task]
+                try:
+                    pipeline_result = await task
+                    
+                    if "error" in pipeline_result and "inserted_count" not in pipeline_result:
+                         results[source] = pipeline_result
+                         continue
 
-        futures = list(future_to_source.keys())
-
-        if timeout_seconds and isinstance(timeout_seconds, (int, float)) and timeout_seconds > 0:
-            done, not_done = concurrent.futures.wait(futures, timeout=timeout_seconds)
-        else:
-            done, not_done = concurrent.futures.wait(futures, timeout=None)
-
-        for future in done:
-            source = future_to_source[future]
+                    inserted_count = pipeline_result.get("inserted_count", 0)
+                    total_articles = pipeline_result.get("total_articles", 0)
+                    results[source] = {
+                        "inserted_count": inserted_count,
+                        "total_articles": total_articles,
+                    }
+                    logger.info(
+                        f"Pipeline {source} completed: inserted={inserted_count}, total={total_articles}"
+                    )
+                except Exception as e:
+                    logger.exception(f"Pipeline {source} failed handling result")
+                    results[source] = {"error": str(e)}
+            
+            # Handle timed out tasks
+            for task in pending:
+                source = tasks[task]
+                task.cancel()
+                logger.warning(f"Pipeline {source} timed out after {timeout_seconds} seconds")
+                results[source] = {"error": "Timeout"}
+                
+        except Exception as e:
+            logger.exception(f"Error during concurrent execution: {e}")
+            for source in sources:
+                if source not in results:
+                    results[source] = {"error": str(e)}
+    else:
+        # No timeout - wait for all tasks to complete
+        for task, source in tasks.items():
             try:
-                pipeline_result = future.result()
+                pipeline_result = await task
+                
+                if "error" in pipeline_result and "inserted_count" not in pipeline_result:
+                        results[source] = pipeline_result
+                        continue
+
                 inserted_count = pipeline_result.get("inserted_count", 0)
                 total_articles = pipeline_result.get("total_articles", 0)
                 results[source] = {
@@ -233,13 +287,8 @@ def run_pipelines_concurrently(sources=None, input_data=None, timeout_seconds=No
                     f"Pipeline {source} completed: inserted={inserted_count}, total={total_articles}"
                 )
             except Exception as e:
-                logger.exception(f"Pipeline {source} failed")
+                logger.exception(f"Pipeline {source} failed handling result")
                 results[source] = {"error": str(e)}
-
-        for future in not_done:
-            source = future_to_source[future]
-            logger.warning(f"Pipeline {source} timed out after {timeout_seconds} seconds")
-            results[source] = {"error": "Timeout"}
 
     elapsed = time.perf_counter() - start_time
     results["execution_time"] = f"{elapsed:.2f} seconds"
