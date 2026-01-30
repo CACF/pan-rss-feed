@@ -6,8 +6,6 @@ from app.tasks.news_scraper_tasks import run_pipelines_concurrently
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("news_scraper", __name__)
-
-
 @bp.route("/run_scrapers", methods=["POST"])
 def run_scrapers():
     """Run all requested news scraping pipelines concurrently.
