@@ -36,8 +36,6 @@ class MongoDBClient:
                 inserted_ids.append(document["_id"])
         return inserted_ids
 
-
-
     @staticmethod
     def insert_articles_to_mongo(article_list, user_email=None, collection_name="News"):
         if not article_list:
