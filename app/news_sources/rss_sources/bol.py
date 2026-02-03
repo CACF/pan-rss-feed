@@ -37,15 +37,12 @@ class BOLNewsBusinessRSSPipeline:
             return datetime.now(timezone.utc)
 
     # ----------------------------
-    # Content Cleaning
+    # Content Cleaning (RSS fallback)
     # ----------------------------
     @staticmethod
     def clean_content(content_html):
         """
-        Clean WordPress RSS HTML:
-        - Remove scripts, styles, images
-        - Remove 'The post ... appeared first on BOL News'
-        - Normalize whitespace
+        Clean WordPress RSS HTML
         """
         if not content_html:
             return ""
@@ -60,20 +57,83 @@ class BOLNewsBusinessRSSPipeline:
 
             text = soup.get_text(separator=" ")
 
-            # Remove WordPress boilerplate
             text = re.sub(
                 r"The post .*? appeared first on .*?\.",
                 "",
                 text,
                 flags=re.IGNORECASE,
             )
-
             text = re.sub(r"http\S+|www\.\S+", "", text)
+
             return " ".join(text.split())
 
         except Exception as e:
             logger.warning(f"Failed to clean content: {e}")
             return content_html or ""
+
+    # ----------------------------
+    # Full Article Scraper
+    # ----------------------------
+    @staticmethod
+    def full_description(article_url):
+        """
+        Scrape full article content from BOL News article page
+        CSS selector:
+        .elementor-widget-theme-post-content p
+        """
+        if not article_url:
+            return ""
+
+        try:
+            logger.info(f"Fetching full article: {article_url}")
+
+            with cloudscraper.create_scraper() as scraper:
+                response = scraper.get(
+                    article_url,
+                    timeout=30,
+                    headers=get_random_headers(),
+                )
+                try:
+                    response.raise_for_status()
+                    html = response.text
+                finally:
+                    response.close()
+
+            soup = BeautifulSoup(html, "html.parser")
+
+            paragraphs = soup.select(
+                ".elementor-widget-theme-post-content p"
+            )
+
+            if not paragraphs:
+                logger.warning(
+                    f"No article body found for URL: {article_url}"
+                )
+                return ""
+
+            content_parts = []
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                if text:
+                    content_parts.append(text)
+
+            content = " ".join(content_parts)
+
+            content = re.sub(
+                r"The post .*? appeared first on .*?\.",
+                "",
+                content,
+                flags=re.IGNORECASE,
+            )
+            content = re.sub(r"http\S+|www\.\S+", "", content)
+
+            return " ".join(content.split())
+
+        except Exception as e:
+            logger.error(
+                f"Failed to scrape full article from {article_url}: {e}"
+            )
+            return ""
 
     # ----------------------------
     # RSS Fetch & Parse
@@ -124,9 +184,18 @@ class BOLNewsBusinessRSSPipeline:
                         else datetime.now(timezone.utc)
                     )
 
-                    content = BOLNewsBusinessRSSPipeline.clean_content(
-                        desc_elem.get_text() if desc_elem else ""
+                    # 🔥 Full article first
+                    content = BOLNewsBusinessRSSPipeline.full_description(
+                        link
                     )
+
+                    # 🔁 Fallback to RSS description
+                    if len(content) < 150 and desc_elem:
+                        content = (
+                            BOLNewsBusinessRSSPipeline.clean_content(
+                                desc_elem.get_text()
+                            )
+                        )
 
                     if len(content) < 150:
                         logger.info(
@@ -165,7 +234,7 @@ class BOLNewsBusinessRSSPipeline:
 
                 except Exception as e:
                     logger.warning(
-                        f"Failed to process BOL News article item: {e}"
+                        f"Failed to process BOL News item: {e}"
                     )
                     continue
 
@@ -175,7 +244,7 @@ class BOLNewsBusinessRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch BOL News RSS feed: {e}")
+            logger.error(f"Failed to fetch RSS feed: {e}")
             return []
 
     # ----------------------------
@@ -187,7 +256,9 @@ class BOLNewsBusinessRSSPipeline:
             all_articles = []
 
             for feed_url in BOLNewsBusinessRSSPipeline.RSS_FEEDS:
-                articles = BOLNewsBusinessRSSPipeline.fetch_rss_feed(feed_url)
+                articles = BOLNewsBusinessRSSPipeline.fetch_rss_feed(
+                    feed_url
+                )
                 all_articles.extend(articles)
 
             if not all_articles:
@@ -195,7 +266,9 @@ class BOLNewsBusinessRSSPipeline:
 
             result = MongoDBClient.insert_articles_to_mongo(
                 all_articles,
-                user_email=input_data.get("email") if input_data else None,
+                user_email=input_data.get("email")
+                if input_data
+                else None,
             )
             return result
 
