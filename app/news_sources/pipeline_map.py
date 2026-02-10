@@ -19,6 +19,9 @@ from app.news_sources.rss_sources.bol import BOLNewsBusinessRSSPipeline
 from app.news_sources.rss_sources.tc import TradeChronicleRSSPipeline
 from app.news_sources.rss_sources.propak import ProPakistaniBusinessRSSPipeline
 from app.news_sources.rss_sources.cd import CoinDeskRSSPipeline
+from app.news_sources.rss_sources.decrypt import DecryptRSSPipeline
+from app.news_sources.rss_sources.bitcoin_magzine import BitcoinMagazineRSSPipeline
+from app.news_sources.rss_sources.blockworks import BlockworksRSSPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -41,5 +44,8 @@ PIPELINE_MAP = {
     "bol" : BOLNewsBusinessRSSPipeline,
     "tc" : TradeChronicleRSSPipeline,
     "cd" : CoinDeskRSSPipeline,
-    "propak" : ProPakistaniBusinessRSSPipeline
+    "propak" : ProPakistaniBusinessRSSPipeline,
+    "decrypt" : DecryptRSSPipeline,
+    "bitcoin_magzine" : BitcoinMagazineRSSPipeline,
+    "blockworks" : BlockworksRSSPipeline
 }
