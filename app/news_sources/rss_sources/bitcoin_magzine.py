@@ -11,10 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class BitcoinMagazineRSSPipeline:
-    """
-    Bitcoin Magazine RSS feed pipeline
-    WordPress RSS (content:encoded, dc:creator)
-    """
 
     SOURCE = "Bitcoin Magazine"
     RSS_FEEDS = [

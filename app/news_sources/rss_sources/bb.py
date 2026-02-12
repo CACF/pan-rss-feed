@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class BloombergRSSPipeline:
-    """
-    Bloomberg RSS feed pipeline that fetches, parses, and stores Bloomberg news articles.
-    """
 
     SOURCE = "Bloomberg"
     RSS_FEEDS = [

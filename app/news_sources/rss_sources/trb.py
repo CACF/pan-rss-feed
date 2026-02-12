@@ -11,10 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class TribuneRSSPipeline:
-    """
-    Tribune RSS feed pipeline — Business category (Flask-compatible, single-threaded)
-    Uses cloudscraper for Cloudflare-protected requests.
-    """
 
     SOURCE = "Tribune"
     RSS_FEEDS = [
@@ -59,21 +55,13 @@ class TribuneRSSPipeline:
 
         try:
             soup = BeautifulSoup(content_html, "html.parser")
-
-            # Remove unwanted tags entirely
             for tag in soup(["script", "style", "iframe", "noscript"]):
                 tag.decompose()
-
-            # Remove anchor tags but keep their inner text
             for a_tag in soup.find_all("a"):
                 a_tag.unwrap()
 
             text = soup.get_text(separator=" ")
-
-            # Remove visible URLs (plain links in text)
             text = re.sub(r"http\S+|www\.\S+", "", text)
-
-            # Normalize spaces
             return " ".join(text.split())
 
         except Exception as e:
@@ -119,7 +107,6 @@ class TribuneRSSPipeline:
                         else datetime.now(timezone.utc)
                     )
 
-                    # Prefer full content if available
                     if content_elem:
                         content = TribuneRSSPipeline.clean_content(content_elem.get_text())
                     elif desc_elem:

@@ -10,13 +10,6 @@ from app.utilities import MongoDBClient, get_random_headers
 logger = logging.getLogger(__name__)
 
 class TradeChronicleRSSPipeline:
-    """
-    Trade Chronicle RSS pipeline:
-    - Fetch RSS feed
-    - For each link, fetch full article
-    - Extract text content using div.entry-content.clr p span
-    - Store in MongoDB
-    """
 
     SOURCE = "Trade Chronicle"
     RSS_FEEDS = ["https://tradechronicle.com/feed/"]

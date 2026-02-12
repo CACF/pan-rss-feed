@@ -16,7 +16,6 @@ class FinancialDailyBusinessPipeline:
     Financial Daily Business scraper pipeline that fetches, parses,
     and stores business news articles from thefinancialdaily.com.
     """
-
     SOURCE = "Financial Daily - Business"
     BASE_URL = "https://thefinancialdaily.com"
     SECTION_URL = f"{BASE_URL}/category/business/"
@@ -25,7 +24,6 @@ class FinancialDailyBusinessPipeline:
     def parse_date(date_str):
         """Parse article date string into timezone-aware datetime."""
         try:
-            # Handle ISO-8601 first
             try:
                 return datetime.fromisoformat(date_str)
             except ValueError:
@@ -124,26 +122,16 @@ class FinancialDailyBusinessPipeline:
             finally:
                 response.close()
             soup = BeautifulSoup(payload, "html.parser")
-
-            # Extract title
             title_elem = soup.select_one("h1.tdb-title-text")
             title = title_elem.get_text(strip=True) if title_elem else ""
-
-            # Extract published date from <time datetime="...">
             date_elem = soup.select_one(
                 "div.tdb-block-inner.td-fix-index > time.entry-date.updated"
             )
             date_str = date_elem["datetime"] if date_elem and date_elem.has_attr("datetime") else ""
             pub_date = cls.parse_date(date_str) if date_str else datetime.now(timezone.utc)
-
-            # Extract author
             author_elem = soup.select_one("div.tdb-author-name-wrap a.tdb-author-name")
             author = author_elem.get_text(strip=True) if author_elem else "Unknown"
-
-            # Extract content
             content = cls.extract_description(soup)
-
-            # Skip if content is too short
             if len(content) < 200:
                 logger.info(f"Skipping short article ({len(content)} chars): {url}")
                 return None

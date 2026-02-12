@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class WSJRSSPipeline:
-    """
-    WSJ RSS feed pipeline that fetches, parses, and stores WSJ news articles.
-    """
 
     SOURCE = "WSJ US Business"
     RSS_FEEDS = [
@@ -37,22 +34,13 @@ class WSJRSSPipeline:
             return ""
         try:
             soup = BeautifulSoup(content_html, "html.parser")
-
-            # Remove script and style tags
             for script in soup(["script", "style"]):
                 script.decompose()
 
-            # Remove <a> tags but keep their text (unlink)
             for a_tag in soup.find_all("a"):
                 a_tag.unwrap()
-
-            # Extract text
             text = soup.get_text(separator=" ")
-
-            # Remove plain URLs from text (http/https)
             text = re.sub(r"http\S+|www\S+", "", text)
-
-            # Clean extra spaces/newlines
             text = " ".join(text.split())
 
             return text.strip()
@@ -100,15 +88,11 @@ class WSJRSSPipeline:
                     author = (
                         author_elem.get_text(strip=True) if author_elem else "Unknown"
                     )
-
-                    # Clean and validate content
                     content = (
                         WSJRSSPipeline.clean_content(desc_elem.get_text())
                         if desc_elem
                         else ""
                     )
-
-                    # Skip if description/content is too short
                     if len(content) < 200:
                         continue
 

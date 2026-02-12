@@ -12,11 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class DecryptRSSPipeline:
-    """
-    Decrypt RSS feed pipeline.
-    RSS -> article link
-    Fetch full article content + author from article page
-    """
 
     SOURCE = "Decrypt"
     RSS_FEEDS = [
@@ -74,7 +69,6 @@ class DecryptRSSPipeline:
             res.raise_for_status()
             soup = BeautifulSoup(res.text, "lxml")
 
-            # Full article content
             for p in soup.select("div[class*='grid-cols-'] p span"):
                 text = p.get_text(strip=True)
                 if len(text) < 30:
@@ -86,7 +80,6 @@ class DecryptRSSPipeline:
             if paragraphs:
                 content = " ".join(paragraphs)
 
-            # Author
             author_elem = soup.select_one("div span span.underline a")
             if author_elem:
                 author = author_elem.get_text(strip=True)

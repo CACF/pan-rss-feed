@@ -12,10 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class DawnRSSPipeline:
-    """
-    Dawn RSS feed pipeline that fetches, parses,
-    and stores Dawn news articles from RSS feeds.
-    """
 
     SOURCE = "Dawn"
     RSS_FEEDS = [
@@ -32,10 +28,6 @@ class DawnRSSPipeline:
         "Accept-Language": "en-US,en;q=0.9",
         "Referer": "https://www.google.com/",
     }
-
-    # ------------------------
-    # Helpers
-    # ------------------------
 
     @staticmethod
     def parse_date(date_str):
@@ -90,20 +82,11 @@ class DawnRSSPipeline:
         if not author_raw:
             return "Dawn Web Desk"
 
-        # remove email addresses
         author = re.sub(r"\b\S+@\S+\b", "", author_raw)
-
-        # remove parentheses
         author = author.replace("(", "").replace(")", "")
-
-        # normalize spaces
         author = " ".join(author.split())
 
         return author or "Dawn Web Desk"
-
-    # ------------------------
-    # RSS Fetching
-    # ------------------------
 
     @staticmethod
     def fetch_dawn_rss_feed(feed_url):
@@ -193,10 +176,6 @@ class DawnRSSPipeline:
         except Exception as e:
             logger.error(f"Failed to fetch Dawn RSS feed {feed_url}: {e}")
             return []
-
-    # ------------------------
-    # Pipeline Execution
-    # ------------------------
 
     @staticmethod
     def process_input(input_data=None):

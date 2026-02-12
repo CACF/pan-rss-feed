@@ -23,6 +23,7 @@ from app.news_sources.rss_sources.decrypt import DecryptRSSPipeline
 from app.news_sources.rss_sources.bitcoin_magzine import BitcoinMagazineRSSPipeline
 from app.news_sources.rss_sources.blockworks import BlockworksRSSPipeline
 from app.news_sources.rss_sources.AiNews import AIBusinessStrategyRSSPipeline
+from app.news_sources.rss_sources.MIT import MITTechnologyReviewAIRSSPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -49,5 +50,6 @@ PIPELINE_MAP = {
     "decrypt" : DecryptRSSPipeline,
     "bitcoin_magzine" : BitcoinMagazineRSSPipeline,
     "blockworks" : BlockworksRSSPipeline,
-    "AiNews" : AIBusinessStrategyRSSPipeline
+    "AiNews" : AIBusinessStrategyRSSPipeline,
+    "MIT" : MITTechnologyReviewAIRSSPipeline
 }

@@ -11,10 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class ProPakistaniBusinessRSSPipeline:
-    """
-    ProPakistani Business RSS feed pipeline
-    Flask-compatible, single-threaded, production-safe
-    """
 
     SOURCE = "ProPakistani"
     RSS_FEEDS = [

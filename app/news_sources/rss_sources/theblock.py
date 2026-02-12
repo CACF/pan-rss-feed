@@ -5,7 +5,7 @@ import time
 import concurrent.futures
 from bs4 import BeautifulSoup
 import re
-from curl_cffi import requests  # <--- use curl_cffi for Cloudflare bypass
+from curl_cffi import requests 
 from app.utilities import MongoDBClient
 
 logger = logging.getLogger(__name__)
@@ -32,13 +32,9 @@ class TheBlockRSSPipeline:
         ),
     }
 
-    # -------------------
-    # Session (Cloudflare-safe)
-    # -------------------
     session = requests.Session(impersonate="chrome120")
     session.headers.update(BASE_HEADERS)
 
-    # ---------- Date Parsing ----------
     @staticmethod
     def parse_date(date_str):
         formats = [
@@ -53,13 +49,11 @@ class TheBlockRSSPipeline:
                 continue
         return datetime.now(timezone.utc)
 
-    # ---------- Text Cleaning ----------
     @staticmethod
     def clean_content(text):
         text = re.sub(r"http\S+|www\.\S+", "", text)
         return " ".join(text.split())
 
-    # ---------- Full Article Scrape ----------
     @classmethod
     def full_description(cls, link):
         """
@@ -76,13 +70,11 @@ class TheBlockRSSPipeline:
         amp_link = clean_link.rstrip("/") + "/amp"
 
         try:
-            # Cloudflare bypass request
             res = cls.session.get(amp_link, timeout=25)
             res.raise_for_status()
 
             soup = BeautifulSoup(res.text, "lxml")
 
-            # ---- Content ----
             for p in soup.select(".dynamic-content > p"):
                 text = p.get_text(strip=True)
                 if len(text) < 40:
@@ -94,7 +86,6 @@ class TheBlockRSSPipeline:
             if paragraphs:
                 content = " ".join(paragraphs)
 
-            # ---- Author ----
             author_elem = soup.select_one("div.bylines a")
             if author_elem:
                 author = author_elem.get_text(strip=True)
@@ -104,7 +95,6 @@ class TheBlockRSSPipeline:
 
         return content, author
 
-    # ---------- RSS Fetch ----------
     @classmethod
     def fetch_theblock_rss_feed(cls, feed_url):
         logger.info(f"Fetching The Block RSS feed: {feed_url}")
@@ -156,7 +146,6 @@ class TheBlockRSSPipeline:
         logger.info(f"Parsed {len(articles)} articles from {feed_url}")
         return articles
 
-    # ---------- Concurrent ----------
     @classmethod
     def process_input(cls, input_data=None):
         logger.info("Starting The Block RSS pipeline (concurrent)")
@@ -176,7 +165,6 @@ class TheBlockRSSPipeline:
 
         return all_articles
 
-    # ---------- Run ----------
     @classmethod
     def run_pipeline(cls, input_data=None):
         start = time.perf_counter()

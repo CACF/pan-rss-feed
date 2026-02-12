@@ -12,12 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ExpressUrduBusinessRSSPipeline:
-    """
-    Express Urdu RSS feed pipeline — Business
-    Translates Urdu -> English (title, description, content)
-    Flask-compatible, single-threaded, production-safe
-    """
-
+ 
     SOURCE = "ExpressNews"
     RSS_FEEDS = [
         "https://www.express.pk/feed/business",

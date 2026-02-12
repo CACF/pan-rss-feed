@@ -12,11 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 class BlockworksRSSPipeline:
-    """
-    Blockworks Atom feed pipeline.
-    Atom feed -> article link
-    Fetch full article content + author from article page
-    """
 
     SOURCE = "Blockworks"
     RSS_FEEDS = [

@@ -13,19 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class BusinessRecorderRSSPipeline:
-    """
-    Business Recorder RSS feed pipeline that fetches RSS feeds via Selenium,
-    opens articles with Selenium, and stores the parsed articles.
-    """
 
     SOURCE = "Business Recorder"
     RSS_FEEDS = [
         "https://www.brecorder.com/feeds/business",
     ]
 
-    # -----------------------------
-    # Helpers
-    # -----------------------------
     @staticmethod
     def create_driver(headless=True):
         chrome_options = Options()
@@ -78,9 +71,6 @@ class BusinessRecorderRSSPipeline:
             logger.warning(f"Failed to clean content: {e}")
             return content_html
 
-    # -----------------------------
-    # Fetch RSS via Selenium
-    # -----------------------------
     @staticmethod
     def fetch_br_rss_feed(feed_url):
         try:
@@ -100,7 +90,6 @@ class BusinessRecorderRSSPipeline:
 
             articles = []
 
-            # Reuse one driver for all articles to save resources
             article_driver = BusinessRecorderRSSPipeline.create_driver(headless=True)
 
             for item in items:
@@ -122,13 +111,9 @@ class BusinessRecorderRSSPipeline:
                     category = category_elem.get_text(strip=True) if category_elem else "Business"
                     author = author_elem.get_text(strip=True) if author_elem else "BR Web Desk"
 
-                    # Open article in Selenium
                     article_driver.get(link)
-                    # time.sleep(1)
                     article_soup = BeautifulSoup(article_driver.page_source, "html.parser")
                     content_div = article_soup.find("div", class_="story__content")
-
-                    # Prefer content:encoded, fallback to article div, then description
                     if content_encoded_elem:
                         content_html = content_encoded_elem.get_text()
                     elif content_div:
@@ -170,9 +155,6 @@ class BusinessRecorderRSSPipeline:
             logger.error(f"Selenium RSS fetch failed for {feed_url}: {e}")
             return []
 
-    # -----------------------------
-    # Process all feeds concurrently
-    # -----------------------------
     @staticmethod
     def process_input(input_data=None):
         try:

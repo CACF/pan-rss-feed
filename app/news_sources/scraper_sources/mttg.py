@@ -50,20 +50,12 @@ class MettisglobalBusinessScraper:
             return ""
         try:
             soup = BeautifulSoup(html, "html.parser")
-
-            # Remove unwanted tags
             for tag in soup(["script", "style", "aside"]):
                 tag.decompose()
-
-            # Remove <a> tags but keep their text
             for a in soup.find_all("a"):
                 a.unwrap()
-
-            # Extract text and remove any visible URLs
             text = soup.get_text(separator=" ")
             text = re.sub(r"http\S+|www\.\S+", "", text)
-
-            # Collapse extra spaces
             return " ".join(text.split())
         except Exception as e:
             logger.warning(f"clean_content error: {e}")
@@ -112,12 +104,8 @@ class MettisglobalBusinessScraper:
                 resp.close()
 
             soup = BeautifulSoup(payload, "html.parser")
-
-            # --- Title ---
             title_elem = soup.select_one("div.postNews h1")
             title = title_elem.get_text(strip=True) if title_elem else ""
-
-            # --- Date ---
             time_elem = soup.select_one("div.postNews span.ListnewsDate")
             date_str = (
                 time_elem.get("datetime")
@@ -126,11 +114,8 @@ class MettisglobalBusinessScraper:
             )
             pub_date = cls.parse_date(date_str) if date_str else datetime.now(timezone.utc)
 
-            # --- Author ---
             author_elem = soup.select_one("div.postNews p.Listnewscategroy a")
             author = author_elem.get_text(strip=True) if author_elem else "Unknown"
-
-            # --- Content ---
             paragraphs = soup.select("div#text p")
             content_paragraphs = []
             for p in paragraphs:
@@ -138,7 +123,6 @@ class MettisglobalBusinessScraper:
                 if text and not text.lower().startswith("copyright"):
                     content_paragraphs.append(text)
 
-            # Combine and clean all text (remove links & URLs)
             raw_content = " ".join(content_paragraphs)
             content = cls.clean_content(raw_content)
            

@@ -11,11 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class DailyPakistanBusinessRSSPipeline:
-    """
-    Daily Pakistan RSS feed pipeline — Business category (English)
-    Flask-compatible, single-threaded, production-safe
-    """
-
     SOURCE = "DailyPakistan"
     RSS_FEEDS = [
         "https://en.dailypakistan.com.pk/business/feed",

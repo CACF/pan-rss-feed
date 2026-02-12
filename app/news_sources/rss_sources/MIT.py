@@ -10,14 +10,13 @@ from app.utilities import MongoDBClient, get_random_headers
 logger = logging.getLogger(__name__)
 
 
-class AIBusinessStrategyRSSPipeline:
+class MITTechnologyReviewAIRSSPipeline:
 
-    SOURCE = "AI News"
+    SOURCE = "MIT Technology Review"
 
     RSS_FEEDS = [
-        "https://www.artificialintelligence-news.com/categories/inside-ai/ai-business-strategy/feed/"
+        "https://www.technologyreview.com/topic/artificial-intelligence/feed/"
     ]
-
 
     @staticmethod
     def parse_date(date_str):
@@ -39,9 +38,10 @@ class AIBusinessStrategyRSSPipeline:
         soup = BeautifulSoup(content_html, "html.parser")
         for tag in soup(["script", "style", "iframe", "noscript", "img", "figure"]):
             tag.decompose()
-        for p in soup.find_all("p"):
-            if "The post" in p.get_text():
-                p.decompose()
+        for div in soup.find_all("div"):
+            if div.attrs.get("data-chronoton-summary"):
+                div.decompose()
+
         for p in soup.find_all("p"):
             if not p.get_text(strip=True):
                 p.decompose()
@@ -54,7 +54,7 @@ class AIBusinessStrategyRSSPipeline:
     @staticmethod
     def fetch_rss_feed(feed_url):
         try:
-            logger.info(f"Fetching AI Business Strategy RSS: {feed_url}")
+            logger.info(f"Fetching MIT AI RSS: {feed_url}")
 
             response = requests.get(
                 feed_url,
@@ -85,7 +85,7 @@ class AIBusinessStrategyRSSPipeline:
                     link = link_elem.get_text(strip=True)
 
                     pub_date = (
-                        AIBusinessStrategyRSSPipeline.parse_date(
+                        MITTechnologyReviewAIRSSPipeline.parse_date(
                             pub_date_elem.get_text()
                         )
                         if pub_date_elem
@@ -100,7 +100,7 @@ class AIBusinessStrategyRSSPipeline:
                         else ""
                     )
 
-                    content = AIBusinessStrategyRSSPipeline.clean_content(
+                    content = MITTechnologyReviewAIRSSPipeline.clean_content(
                         raw_content
                     )
 
@@ -111,7 +111,7 @@ class AIBusinessStrategyRSSPipeline:
                     author = (
                         creator_elem.get_text(strip=True)
                         if creator_elem
-                        else "AI News Staff"
+                        else "MIT Technology Review Staff"
                     )
 
                     categories = [
@@ -127,9 +127,9 @@ class AIBusinessStrategyRSSPipeline:
                         "title": title,
                         "authors": author,
                         "language": "en",
-                        "source": AIBusinessStrategyRSSPipeline.SOURCE,
+                        "source": MITTechnologyReviewAIRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": "AI Business",
+                        "genre": "Artificial Intelligence",
                         "media_origin": "foreign",
                         "tags": categories,
                     }
@@ -140,7 +140,7 @@ class AIBusinessStrategyRSSPipeline:
                     logger.warning(f"Failed to process item: {e}")
                     continue
 
-            logger.info(f"Parsed {len(articles)} AI Business articles.")
+            logger.info(f"Parsed {len(articles)} MIT AI articles.")
             return articles
 
         except Exception as e:
@@ -152,8 +152,8 @@ class AIBusinessStrategyRSSPipeline:
         try:
             all_articles = []
 
-            for feed_url in AIBusinessStrategyRSSPipeline.RSS_FEEDS:
-                articles = AIBusinessStrategyRSSPipeline.fetch_rss_feed(
+            for feed_url in MITTechnologyReviewAIRSSPipeline.RSS_FEEDS:
+                articles = MITTechnologyReviewAIRSSPipeline.fetch_rss_feed(
                     feed_url
                 )
                 all_articles.extend(articles)
@@ -169,7 +169,7 @@ class AIBusinessStrategyRSSPipeline:
             return result
 
         except Exception as e:
-            logger.error(f"AI Business Strategy RSS pipeline failed: {e}")
+            logger.error(f"MIT AI RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

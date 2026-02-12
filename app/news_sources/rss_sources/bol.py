@@ -11,19 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class BOLNewsBusinessRSSPipeline:
-    """
-    BOL News RSS feed pipeline — Business
-    Flask-compatible, single-threaded, production-safe
-    """
 
     SOURCE = "BOLNews"
     RSS_FEEDS = [
         "https://www.bolnews.com/category/business/feed/",
     ]
 
-    # ----------------------------
-    # Date Parsing
-    # ----------------------------
     @staticmethod
     def parse_date(date_str):
         if not date_str:
@@ -36,9 +29,6 @@ class BOLNewsBusinessRSSPipeline:
             logger.warning(f"Unrecognized date format: {date_str}")
             return datetime.now(timezone.utc)
 
-    # ----------------------------
-    # Content Cleaning (RSS fallback)
-    # ----------------------------
     @staticmethod
     def clean_content(content_html):
         """
@@ -71,9 +61,6 @@ class BOLNewsBusinessRSSPipeline:
             logger.warning(f"Failed to clean content: {e}")
             return content_html or ""
 
-    # ----------------------------
-    # Full Article Scraper
-    # ----------------------------
     @staticmethod
     def full_description(article_url):
         """
@@ -135,9 +122,6 @@ class BOLNewsBusinessRSSPipeline:
             )
             return ""
 
-    # ----------------------------
-    # RSS Fetch & Parse
-    # ----------------------------
     @staticmethod
     def fetch_rss_feed(feed_url):
         try:
@@ -184,12 +168,10 @@ class BOLNewsBusinessRSSPipeline:
                         else datetime.now(timezone.utc)
                     )
 
-                    # 🔥 Full article first
                     content = BOLNewsBusinessRSSPipeline.full_description(
                         link
                     )
 
-                    # 🔁 Fallback to RSS description
                     if len(content) < 150 and desc_elem:
                         content = (
                             BOLNewsBusinessRSSPipeline.clean_content(
@@ -247,9 +229,6 @@ class BOLNewsBusinessRSSPipeline:
             logger.error(f"Failed to fetch RSS feed: {e}")
             return []
 
-    # ----------------------------
-    # Pipeline Runner
-    # ----------------------------
     @staticmethod
     def run_pipeline(input_data=None):
         try:

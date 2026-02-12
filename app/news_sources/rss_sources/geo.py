@@ -11,10 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class GeoNewsBusinessRSSPipeline:
-    """
-    Geo News RSS feed pipeline — Business category (English)
-    Flask-compatible, single-threaded, production-safe
-    """
 
     SOURCE = "GeoNews"
     RSS_FEEDS = [
