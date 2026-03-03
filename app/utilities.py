@@ -50,7 +50,6 @@ class MongoDBClient:
         with MongoDBClient(connection_string, db_name) as mongo_client:
             collection = mongo_client.db[collection_name]
             seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-
             delete_result = collection.delete_many({
                 "articlePubDate": {"$lt": seven_days_ago}
             })

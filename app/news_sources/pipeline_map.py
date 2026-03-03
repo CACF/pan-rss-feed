@@ -24,6 +24,18 @@ from app.news_sources.rss_sources.bitcoin_magzine import BitcoinMagazineRSSPipel
 from app.news_sources.rss_sources.blockworks import BlockworksRSSPipeline
 from app.news_sources.rss_sources.AiNews import AIBusinessStrategyRSSPipeline
 from app.news_sources.rss_sources.MIT import MITTechnologyReviewAIRSSPipeline
+from app.news_sources.rss_sources.Techcrunch import TechCrunchRSSPipeline
+from app.news_sources.rss_sources.VentureBeat import VentureBeatBusinessRSSPipeline
+from app.news_sources.rss_sources.wired import WiredBusinessRSSPipeline
+from app.news_sources.rss_sources.theverge import TheVergeRSSPipeline
+from app.news_sources.rss_sources.theregister import TheRegisterRSSPipeline
+from app.news_sources.rss_sources.forbes import ForbesRSSPipeline
+from app.news_sources.rss_sources.phoneworld import PhoneWorldRSSPipeline
+from app.news_sources.rss_sources.techx import TechXRSSPipeline
+from app.news_sources.rss_sources.pakrealestatetimes import PakistanRealEstateTimesRSSPipeline
+from app.news_sources.rss_sources.plotistaan import PlotistanRSSPipeline
+from app.news_sources.rss_sources.zameen_com import ZameenRSSPipeline
+from app.news_sources.rss_sources.graana_com import GraanaRSSPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -51,5 +63,14 @@ PIPELINE_MAP = {
     "bitcoin_magzine" : BitcoinMagazineRSSPipeline,
     "blockworks" : BlockworksRSSPipeline,
     "AiNews" : AIBusinessStrategyRSSPipeline,
-    "MIT" : MITTechnologyReviewAIRSSPipeline
+    "MIT" : MITTechnologyReviewAIRSSPipeline,
+    "Techcrunch" : TechCrunchRSSPipeline,
+    "VentureBeat" : VentureBeatBusinessRSSPipeline,
+    "wired" : WiredBusinessRSSPipeline,
+    "theverge" : TheVergeRSSPipeline,
+    "theregister" : TheRegisterRSSPipeline,
+    "phoneworld" : PhoneWorldRSSPipeline,
+    "plotistaan" : PlotistanRSSPipeline,
+    "zameen_com" : ZameenRSSPipeline,
+    "graana_com" : GraanaRSSPipeline
 }
