@@ -1,7 +1,7 @@
 import uuid
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 from app.utilities import MongoDBClient, get_random_headers
 import requests
@@ -18,6 +18,7 @@ class PBCNewsRSSPipeline:
     RSS_FEEDS = [
         "https://www.pbc.org.pk/news/feed/",  # PBC RSS
     ]
+    DAYS_TO_KEEP = 7  # Keep only last 7 days of articles
 
     @staticmethod
     def parse_date(date_str):
@@ -48,7 +49,7 @@ class PBCNewsRSSPipeline:
             # Extract text
             text = soup.get_text(separator=" ", strip=True)
 
-            # Remove any remaining URLs (e.g. http://, https://, www.)
+            # Remove any remaining URLs
             text = re.sub(r"http\S+|www\.\S+", "", text)
 
             # Normalize whitespace
@@ -63,39 +64,37 @@ class PBCNewsRSSPipeline:
         try:
             logger.info(f"Fetching PBC RSS feed: {feed_url}")
             response = requests.get(feed_url, timeout=30, headers=get_random_headers())
-            try:
-                response.raise_for_status()
-                payload = response.content
-            finally:
-                response.close()
+            response.raise_for_status()
+            payload = response.content
+            response.close()
 
             soup = BeautifulSoup(payload, "lxml-xml")
             items = soup.find_all("item")
-
             feed_build_date = datetime.now(timezone.utc)
-
-
             articles = []
+
+            seven_days_ago = datetime.now(timezone.utc) - timedelta(days=PBCNewsRSSPipeline.DAYS_TO_KEEP)
 
             for item in items:
                 try:
                     title_elem = item.find("title")
                     link_elem = item.find("link")
-                    guid_elem = item.find("guid")
                     author_elem = item.find("dc:creator")
                     content_elem = item.find("content:encoded")
                     desc_elem = item.find("description")
+                    pub_date_elem = item.find("pubDate")
 
                     if not title_elem or not link_elem:
                         continue
 
-                    title = title_elem.get_text(strip=True)
-                    link = link_elem.get_text(strip=True)
                     pub_date = (
-                        PBCNewsRSSPipeline.parse_date(item.find("pubDate").get_text())
-                        if item.find("pubDate")
-                        else datetime.now(timezone.utc)
+                        PBCNewsRSSPipeline.parse_date(pub_date_elem.get_text())
+                        if pub_date_elem else datetime.now(timezone.utc)
                     )
+
+                    # Skip articles older than DAYS_TO_KEEP
+                    if pub_date < seven_days_ago:
+                        continue
 
                     # Clean content
                     content = ""
@@ -106,18 +105,16 @@ class PBCNewsRSSPipeline:
 
                     # Skip articles with very short content
                     if len(content) < 200:
-                        logger.info(f"Skipping short article ({len(content)} chars): {link}")
+                        logger.info(f"Skipping short article ({len(content)} chars): {link_elem.get_text(strip=True)}")
                         continue
 
                     article = {
-                        "_id": link,
+                        "_id": link_elem.get_text(strip=True),
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
-                        "title": title,
-                        "authors": author_elem.get_text(strip=True)
-                        if author_elem
-                        else "Pakistan Business Council",
+                        "title": title_elem.get_text(strip=True),
+                        "authors": author_elem.get_text(strip=True) if author_elem else "Pakistan Business Council",
                         "language": "en-US",
                         "source": PBCNewsRSSPipeline.SOURCE,
                         "content": content,
@@ -139,6 +136,16 @@ class PBCNewsRSSPipeline:
             return []
 
     @staticmethod
+    def delete_old_articles():
+        """Delete articles older than DAYS_TO_KEEP from MongoDB."""
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=PBCNewsRSSPipeline.DAYS_TO_KEEP)
+        try:
+            deleted_count = MongoDBClient.delete_articles_older_than(cutoff_date, source=PBCNewsRSSPipeline.SOURCE)
+            logger.info(f"Deleted {deleted_count} old articles older than {PBCNewsRSSPipeline.DAYS_TO_KEEP} days.")
+        except Exception as e:
+            logger.warning(f"Failed to delete old articles: {e}")
+
+    @staticmethod
     def run_pipeline(input_data=None):
         """Run PBC RSS pipeline."""
         try:
@@ -148,11 +155,17 @@ class PBCNewsRSSPipeline:
                 all_articles.extend(articles)
 
             if not all_articles:
+                logger.info("No new articles found.")
                 return {"inserted_count": 0, "total_articles": 0}
 
+            # Insert new articles
             result = MongoDBClient.insert_articles_to_mongo(
                 all_articles, user_email=input_data.get("email") if input_data else None
             )
+
+            # Delete old articles
+            PBCNewsRSSPipeline.delete_old_articles()
+
             return result
 
         except Exception as e:

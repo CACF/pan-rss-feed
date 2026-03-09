@@ -36,15 +36,15 @@ from app.news_sources.rss_sources.pakrealestatetimes import PakistanRealEstateTi
 from app.news_sources.rss_sources.plotistaan import PlotistanRSSPipeline
 from app.news_sources.rss_sources.zameen_com import ZameenRSSPipeline
 from app.news_sources.rss_sources.graana_com import GraanaRSSPipeline
+from app.news_sources.rss_sources.APP import APPBusinessRSSPipeline
+from app.news_sources.rss_sources.pakbiz import PakbizRSSPipeline
 
 logger = logging.getLogger(__name__)
 
 PIPELINE_MAP = {
     # "Reuters": ReutersRSSPipeline,
-    # "APP NEWS": APPNewsPipeline,
+    "APP NEWS": APPBusinessRSSPipeline,
     "BBC": BBCRSSPipeline,
-    "PBC": PBCNewsRSSPipeline,
-    "TFD": FinancialDailyBusinessPipeline,
     "CNBC" : CNBCRSSPipeline,
     "mttg" : MettisglobalBusinessScraper,
     "trb" : TribuneRSSPipeline,
@@ -61,16 +61,13 @@ PIPELINE_MAP = {
     "propak" : ProPakistaniBusinessRSSPipeline,
     "decrypt" : DecryptRSSPipeline,
     "bitcoin_magzine" : BitcoinMagazineRSSPipeline,
-    "blockworks" : BlockworksRSSPipeline,
     "AiNews" : AIBusinessStrategyRSSPipeline,
     "MIT" : MITTechnologyReviewAIRSSPipeline,
     "Techcrunch" : TechCrunchRSSPipeline,
-    "VentureBeat" : VentureBeatBusinessRSSPipeline,
     "wired" : WiredBusinessRSSPipeline,
     "theverge" : TheVergeRSSPipeline,
     "theregister" : TheRegisterRSSPipeline,
-    "phoneworld" : PhoneWorldRSSPipeline,
-    "plotistaan" : PlotistanRSSPipeline,
     "zameen_com" : ZameenRSSPipeline,
-    "graana_com" : GraanaRSSPipeline
+    "graana_com" : GraanaRSSPipeline,
+    "pakbiz" : PakbizRSSPipeline
 }

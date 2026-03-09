@@ -2,12 +2,13 @@ import uuid
 import logging
 import time
 import concurrent.futures
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from app.utilities import MongoDBClient
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +25,14 @@ class BusinessRecorderRSSPipeline:
         chrome_options = Options()
         if headless:
             chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-software-rasterizer")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument("--ignore-certificate-errors")
+        chrome_options.add_argument("--allow-insecure-localhost")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
         driver = webdriver.Chrome(service=Service(), options=chrome_options)
         return driver
 
@@ -72,148 +73,153 @@ class BusinessRecorderRSSPipeline:
             return content_html
 
     @staticmethod
-    def fetch_br_rss_feed(feed_url):
+    def fetch_rss_items(feed_url):
+        """Fetch RSS items using requests instead of Selenium to avoid SSL issues."""
         try:
-            logger.info(f"Fetching RSS feed via Selenium: {feed_url}")
-            driver = BusinessRecorderRSSPipeline.create_driver(headless=True)
-            driver.get(feed_url)
-            time.sleep(2)  # allow XML to load
-
-            soup = BeautifulSoup(driver.page_source, "lxml-xml")
+            logger.info(f"Fetching RSS feed: {feed_url}")
+            response = requests.get(
+                feed_url,
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=15,
+                verify=False
+            )
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "lxml-xml")
             items = soup.find_all("item")
-            feed_build_date = datetime.now(timezone.utc)
-            driver.quit()
-
             if not items:
                 logger.warning(f"No items found in feed: {feed_url}")
-                return []
-
-            articles = []
-
-            article_driver = BusinessRecorderRSSPipeline.create_driver(headless=True)
-
-            for item in items:
-                try:
-                    title_elem = item.find("title")
-                    link_elem = item.find("link")
-                    pub_date_elem = item.find("pubDate")
-                    category_elem = item.find("category")
-                    author_elem = item.find("author")
-                    content_encoded_elem = item.find("content:encoded")
-                    desc_elem = item.find("description")
-
-                    if not title_elem or not link_elem:
-                        continue
-
-                    title = title_elem.get_text(strip=True)
-                    link = link_elem.get_text(strip=True)
-                    pub_date = pub_date_elem.get_text(strip=True) if pub_date_elem else ""
-                    category = category_elem.get_text(strip=True) if category_elem else "Business"
-                    author = author_elem.get_text(strip=True) if author_elem else "BR Web Desk"
-
-                    article_driver.get(link)
-                    article_soup = BeautifulSoup(article_driver.page_source, "html.parser")
-                    content_div = article_soup.find("div", class_="story__content")
-                    if content_encoded_elem:
-                        content_html = content_encoded_elem.get_text()
-                    elif content_div:
-                        content_html = str(content_div)
-                    else:
-                        content_html = desc_elem.get_text() if desc_elem else ""
-
-                    content = BusinessRecorderRSSPipeline.clean_content(content_html)
-                    if not content or len(content) < 200:
-                        logger.info(f"Skipping short article: '{title}' (length: {len(content)})")
-                        continue
-
-                    article = {
-                        "_id": link,
-                        "article_id": str(uuid.uuid4()),
-                        "articlePubDate": BusinessRecorderRSSPipeline.parse_date(pub_date),
-                        "feedBuildDate": feed_build_date,
-                        "title": title,
-                        "authors": author,
-                        "language": "en-us",
-                        "source": BusinessRecorderRSSPipeline.SOURCE,
-                        "content": content,
-                        "genre": category,
-                        "media_origin": "local",
-                        "tags": [category],
-                    }
-
-                    articles.append(article)
-
-                except Exception as e:
-                    logger.warning(f"Failed to process article {link}: {e}")
-                    continue
-
-            article_driver.quit()
-            logger.info(f"Parsed {len(articles)} articles from {feed_url}")
-            return articles
-
+            return items
         except Exception as e:
-            logger.error(f"Selenium RSS fetch failed for {feed_url}: {e}")
+            logger.error(f"Failed to fetch RSS feed {feed_url}: {e}")
             return []
 
     @staticmethod
-    def process_input(input_data=None):
+    def fetch_article_content(driver, link, content_encoded_elem=None, desc_elem=None):
+        """Scrape article content using Selenium."""
         try:
-            logger.info("Starting Business Recorder RSS pipeline (concurrent)")
-            all_articles = []
-            max_workers = 5
+            driver.get(link)
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            content_div = soup.find("div", class_="story__content")
+            if content_encoded_elem:
+                content_html = content_encoded_elem.get_text()
+            elif content_div:
+                content_html = str(content_div)
+            elif desc_elem:
+                content_html = desc_elem.get_text()
+            else:
+                content_html = ""
+            return BusinessRecorderRSSPipeline.clean_content(content_html)
+        except Exception as e:
+            logger.warning(f"Failed to fetch article content {link}: {e}")
+            return ""
 
-            def _fetch(feed):
-                return BusinessRecorderRSSPipeline.fetch_br_rss_feed(feed)
+    @staticmethod
+    def process_feed(feed_url):
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        feed_build_date = datetime.now(timezone.utc)
+        articles = []
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_feed = {
-                    executor.submit(_fetch, feed): feed
-                    for feed in BusinessRecorderRSSPipeline.RSS_FEEDS
+        items = BusinessRecorderRSSPipeline.fetch_rss_items(feed_url)
+        if not items:
+            return []
+
+        driver = BusinessRecorderRSSPipeline.create_driver(headless=True)
+
+        for item in items:
+            try:
+                title_elem = item.find("title")
+                link_elem = item.find("link")
+                pub_date_elem = item.find("pubDate")
+                category_elem = item.find("category")
+                author_elem = item.find("author")
+                content_encoded_elem = item.find("content:encoded")
+                desc_elem = item.find("description")
+
+                if not title_elem or not link_elem:
+                    continue
+
+                title = title_elem.get_text(strip=True)
+                link = link_elem.get_text(strip=True)
+                pub_date = pub_date_elem.get_text(strip=True) if pub_date_elem else ""
+                category = category_elem.get_text(strip=True) if category_elem else "Business"
+                author = author_elem.get_text(strip=True) if author_elem else "BR Web Desk"
+
+                article_pub_date = BusinessRecorderRSSPipeline.parse_date(pub_date)
+                if article_pub_date < seven_days_ago:
+                    continue
+
+                content = BusinessRecorderRSSPipeline.fetch_article_content(
+                    driver, link, content_encoded_elem, desc_elem
+                )
+
+                if not content or len(content) < 200:
+                    logger.info(f"Skipping short article: '{title}' (length: {len(content)})")
+                    continue
+
+                article = {
+                    "_id": link,
+                    "article_id": str(uuid.uuid4()),
+                    "articlePubDate": article_pub_date,
+                    "feedBuildDate": feed_build_date,
+                    "title": title,
+                    "authors": author,
+                    "language": "en-us",
+                    "source": BusinessRecorderRSSPipeline.SOURCE,
+                    "content": content,
+                    "genre": category,
+                    "media_origin": "local",
+                    "tags": [category],
                 }
 
-                for future in concurrent.futures.as_completed(future_to_feed):
-                    feed = future_to_feed[future]
-                    try:
-                        articles = future.result()
-                        all_articles.extend(articles)
-                        logger.info(f"Feed processed: {feed} -> {len(articles)} articles")
-                    except Exception as e:
-                        logger.exception(f"Feed failed: {feed}")
-                        continue
+                articles.append(article)
 
-            logger.info(f"Business Recorder pipeline processed {len(all_articles)} total articles")
-            return all_articles
+            except Exception as e:
+                logger.warning(f"Failed to process article {link}: {e}")
+                continue
 
-        except Exception as e:
-            logger.error(f"Business Recorder RSS pipeline processing failed: {e}")
-            return []
+        driver.quit()
+        logger.info(f"Processed {len(articles)} articles from feed {feed_url}")
+        return articles
 
     @staticmethod
     def run_pipeline(input_data=None):
         try:
             logger.info("Starting Business Recorder RSS pipeline")
             t0 = time.perf_counter()
-            articles = BusinessRecorderRSSPipeline.process_input(input_data)
+            all_articles = []
 
-            if not articles:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                future_to_feed = {
+                    executor.submit(BusinessRecorderRSSPipeline.process_feed, feed): feed
+                    for feed in BusinessRecorderRSSPipeline.RSS_FEEDS
+                }
+                for future in concurrent.futures.as_completed(future_to_feed):
+                    try:
+                        articles = future.result()
+                        all_articles.extend(articles)
+                    except Exception as e:
+                        feed = future_to_feed[future]
+                        logger.warning(f"Failed to process feed {feed}: {e}")
+
+            if not all_articles:
                 elapsed = round(time.perf_counter() - t0, 2)
-                logger.warning("No Business Recorder articles to insert")
+                logger.warning("No articles found to insert")
                 return {"inserted_count": 0, "total_articles": 0, "elapsed_time": elapsed}
 
             result = MongoDBClient.insert_articles_to_mongo(
-                articles,
-                user_email=input_data.get("email") if input_data else None,
+                all_articles,
+                user_email=input_data.get("email") if input_data else None
             )
             result["elapsed_time"] = round(time.perf_counter() - t0, 2)
             logger.info(f"Business Recorder pipeline finished in {result['elapsed_time']}s")
             return result
 
         except Exception as e:
-            elapsed = round(time.perf_counter(), 2)
+            elapsed = round(time.perf_counter() - t0, 2)
             logger.error(f"Business Recorder RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
                 "error": str(e),
-                "elapsed_time": elapsed,
+                "elapsed_time": elapsed
             }

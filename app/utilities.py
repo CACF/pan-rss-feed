@@ -45,6 +45,7 @@ class MongoDBClient:
             f"mongodb://{os.getenv('DB_USER')}:{os.getenv('DB_PW')}@"
             f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/"
         )
+
         db_name = os.getenv("DB_NAME", "Karobaar")
 
         with MongoDBClient(connection_string, db_name) as mongo_client:
@@ -53,18 +54,22 @@ class MongoDBClient:
             delete_result = collection.delete_many({
                 "articlePubDate": {"$lt": seven_days_ago}
             })
+            logger.info(f"Deleted {delete_result.deleted_count} articles older than 7 days")
+            recent_articles = [
+                article for article in article_list
+                if article.get("articlePubDate") and article["articlePubDate"] >= seven_days_ago
+            ]
 
-            logger.info(
-                f"Deleted {delete_result.deleted_count} old articles from {collection_name}"
-            )
-            inserted_ids = mongo_client.insert_documents(collection_name, article_list)
+            if not recent_articles:
+                logger.info("No articles within the last 7 days to insert.")
+                return {"inserted_count": 0, "total_articles": 0}
+
+            inserted_ids = mongo_client.insert_documents(collection_name, recent_articles)
 
         return {
             "inserted_count": len(inserted_ids),
-            "total_articles": len(article_list)
+            "total_articles": len(recent_articles)
         }
-
-
 
 
 class FeedParser:
