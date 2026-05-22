@@ -1,13 +1,11 @@
 from marshmallow import ValidationError
 from app.repositories.NewsRepository import News
-from pymongo.client_session import ClientSession
-from app.extensions import mongo
 
 
 class NewsBLC:
     @staticmethod
-    def get_filtered_news(args: dict, session: ClientSession) -> dict:
-        allowed_sources = list(mongo.db["News"].distinct("source"))
+    def get_filtered_news(args: dict, session=None) -> dict:
+        allowed_sources = News.get_distinct_sources()
 
         requested_sources = args.get("sources", [])
         if requested_sources:
@@ -50,12 +48,10 @@ class NewsBLC:
         return news
 
     @staticmethod
-    def get_sources_with_genres(session):
+    def get_sources_with_genres(session=None):
         sources_with_genres = {}
-        collection_name = "News"
 
-        # Get distinct sources directly from News collection
-        distinct_sources = list(mongo.db[collection_name].distinct("source"))
+        distinct_sources = News.get_distinct_sources()
 
         for source in distinct_sources:
             if not source:
@@ -65,9 +61,7 @@ class NewsBLC:
             if source_upper == "APP NEWS":
                 sources_with_genres["APP NEWS"] = News.get_appnews_genres(session)
             else:
-                # Generic: get all genres used for this source
-                genres = mongo.db[collection_name].distinct("genre", {"source": source})
-                genres = [g.strip() for g in genres if g]
+                genres = News.get_distinct_genres_for_source(source)
                 genres.append("General")
                 sources_with_genres[source] = sorted(set(genres))
 

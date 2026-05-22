@@ -39,6 +39,15 @@ class ARYNewsBusinessRSSPipeline:
             except Exception:
                 continue
 
+        # Try ISO 8601 with timezone offset (e.g., 2026-05-21T09:08:15+05:00)
+        try:
+            dt = datetime.fromisoformat(date_str.strip())
+            if dt.tzinfo:
+                return dt.astimezone(timezone.utc)
+            return dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+
         logger.warning(f"Unrecognized date format: {date_str}")
         return datetime.now(timezone.utc)
 

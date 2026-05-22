@@ -11,10 +11,5 @@ RABBIT_MQ = os.environ.get("RABBIT_MQ")
 TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY")
 STRIPE_KEY = os.environ.get("STRIPE_KEY")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
-DB_CREDENTIALS = {
-    "DB_HOST": os.environ.get("DB_HOST"),
-    "DB_PORT": os.environ.get("DB_PORT"),
-    "DB_USER": os.environ.get("DB_USER"),
-    "DB_PW": os.environ.get("DB_PW"),
-    "DB_NAME": os.environ.get("DB_NAME"),
-}
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")

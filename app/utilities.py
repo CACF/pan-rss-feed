@@ -3,73 +3,89 @@ import logging
 import xmltodict
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, timezone
-from pymongo import MongoClient
-from bson import ObjectId
 import os
 from functools import lru_cache
 from fake_useragent import UserAgent
+from app.extensions import get_supabase
 
 logger = logging.getLogger(__name__)
 
+
 class MongoDBClient:
-    def __init__(self, connection_string, db_name):
-        self.client = MongoClient(connection_string)
-        self.db = self.client[db_name]
-
-    def close(self):
-        self.client.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-    def insert_documents(self, collection_name, document_list):
-        collection = self.db[collection_name]
-        inserted_ids = []
-        for document in document_list:
-            result = collection.update_one(
-                {"_id": document["_id"]}, {"$set": document}, upsert=True
-            )
-            if result.upserted_id or result.modified_count:
-                inserted_ids.append(document["_id"])
-        return inserted_ids
+    """Supabase-backed client maintaining backward-compatible interface."""
 
     @staticmethod
     def insert_articles_to_mongo(article_list, user_email=None, collection_name="News"):
         if not article_list:
             return {"inserted_count": 0, "total_articles": 0}
 
-        connection_string = (
-            f"mongodb://{os.getenv('DB_USER')}:{os.getenv('DB_PW')}@"
-            f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/"
-        )
+        supabase = get_supabase()
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-        db_name = os.getenv("DB_NAME", "Karobaar")
+        # Delete articles older than 7 days
+        try:
+            supabase.rpc("delete_old_news", {}).execute()
+        except Exception as e:
+            logger.warning(f"Failed to delete old news: {e}")
 
-        with MongoDBClient(connection_string, db_name) as mongo_client:
-            collection = mongo_client.db[collection_name]
-            seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-            delete_result = collection.delete_many({
-                "articlePubDate": {"$lt": seven_days_ago}
+        recent_articles = [
+            article for article in article_list
+            if article.get("articlePubDate") and article["articlePubDate"] >= seven_days_ago
+        ]
+
+        if not recent_articles:
+            logger.info("No articles within the last 7 days to insert.")
+            return {"inserted_count": 0, "total_articles": 0}
+
+        rows = []
+        seen_ids = set()
+        for article in recent_articles:
+            article_id = article.get("_id")
+            if not article_id or article_id in seen_ids:
+                continue
+            seen_ids.add(article_id)
+
+            # Ensure tags is always a list, never a string or None
+            raw_tags = article.get("tags", [])
+            if isinstance(raw_tags, str):
+                tags = [t.strip() for t in raw_tags.split(",") if t.strip()] if raw_tags.strip() else []
+            elif isinstance(raw_tags, list):
+                tags = raw_tags
+            else:
+                tags = []
+
+            rows.append({
+                "id": article_id,
+                "title": article.get("title"),
+                "content": article.get("content"),
+                "authors": article.get("authors"),
+                "tags": tags,
+                "image": article.get("image"),
+                "created_at": (
+                    article["articlePubDate"].isoformat()
+                    if article.get("articlePubDate") else None
+                ),
+                "source": article.get("source"),
+                "genre": article.get("genre"),
+                "language": article.get("language", "en-us"),
+                "media_origin": article.get("media_origin"),
             })
-            logger.info(f"Deleted {delete_result.deleted_count} articles older than 7 days")
-            recent_articles = [
-                article for article in article_list
-                if article.get("articlePubDate") and article["articlePubDate"] >= seven_days_ago
-            ]
 
-            if not recent_articles:
-                logger.info("No articles within the last 7 days to insert.")
-                return {"inserted_count": 0, "total_articles": 0}
-
-            inserted_ids = mongo_client.insert_documents(collection_name, recent_articles)
+        try:
+            result = supabase.table("news").upsert(
+                rows, on_conflict="id"
+            ).execute()
+            inserted_count = len(result.data) if result.data else 0
+        except Exception as e:
+            logger.error(f"Failed to upsert articles to Supabase: {e}")
+            inserted_count = 0
 
         return {
-            "inserted_count": len(inserted_ids),
-            "total_articles": len(recent_articles)
+            "inserted_count": inserted_count,
+            "total_articles": len(recent_articles),
         }
+
+
 
 
 class FeedParser:

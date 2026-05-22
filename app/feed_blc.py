@@ -41,20 +41,12 @@ def feed_starter(data_dict):
                     )
                     # Filter out objects based on the content criteria
                     cleaned_data_list = [data_obj for data_obj in data_list if is_valid_content(data_obj)]
-                    # creating an instance of MongoDB
-                    mongo_client = MongoDBClient(
-                        "mongodb://{}:{}@{}:{}/".format(
-                            os.environ.get("MONGO_USERNAME"),
-                            os.environ.get("MONGO_PASSWORD"),
-                            os.environ.get("MONGO_HOST"),
-                            os.environ.get("MONGO_PORT"),
-                        ),
-                        os.environ.get("DATABASE"),
-                    )
+                    # Insert documents via Supabase-backed client
+                    mongo_client = MongoDBClient()
 
-                    # Inserting documents into MongoDB collection
+                    # Inserting documents into Supabase
                     _ = mongo_client.insert_documents(
-                        os.environ.get("COLLECTION"), cleaned_data_list
+                        "news", cleaned_data_list
                     )
 
                     genre_stop_time = time()

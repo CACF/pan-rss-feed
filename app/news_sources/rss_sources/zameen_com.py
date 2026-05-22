@@ -225,25 +225,11 @@ class ZameenRSSPipeline:
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}
 
-            connection_string = (
-                f"mongodb://{os.getenv('DB_USER')}:{os.getenv('DB_PW')}@"
-                f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/"
-            )
-            db_name = os.getenv("DB_NAME", "Karobaar")
-
-            with MongoDBClient(connection_string, db_name) as mongo_client:
-                collection = mongo_client.db["DemoNews"]
-                seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-                delete_result = collection.delete_many({
-                    "articlePubDate": {"$lt": seven_days_ago}
-                })
-                logger.info(f"Deleted {delete_result.deleted_count} old articles")
-                inserted_ids = mongo_client.insert_documents("DemoNews", all_articles)
+            result = MongoDBClient.insert_articles_to_mongo(all_articles)
 
             return {
-                "inserted_count": len(inserted_ids),
-                "total_articles": len(all_articles),
-                "deleted_count": delete_result.deleted_count
+                "inserted_count": result["inserted_count"],
+                "total_articles": result["total_articles"],
             }
 
         except Exception as e:

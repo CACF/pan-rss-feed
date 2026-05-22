@@ -1,7 +1,7 @@
 import requests
 import os
 from bs4 import BeautifulSoup, NavigableString
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from app.utils.helper_classes.AlJazeeraScraper import AlJazeera_Scraper
 from app.utils.helper_classes.ArianaScraper import Ariana_Scraper
 from app.utils.helper_classes.CNBCScraper import CNBC_Scraper
@@ -9,33 +9,81 @@ from app.utils.helper_classes.ReutersScraper import ReutersScraper
 from app.utils.helper_classes.TheGuardianScraper import The_Guardian_Scraper
 from app.utils.helper_classes.TheNewsScraper import The_News_Scraper
 from app.utils.helper_classes.BBCScraper import BBC_Scraper
-from pymongo import MongoClient
+from app.extensions import get_supabase
 from dateutil.parser import parse
-from datetime import datetime
 import feedparser
 import concurrent.futures
 from unidecode import unidecode
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class MongoDBClient:
-    def __init__(self, connection_string, db_name):
-        self.client = MongoClient(connection_string)
-        self.db = self.client[db_name]
+    """Supabase-backed client maintaining backward-compatible interface."""
+
+    def __init__(self, *args, **kwargs):
+        pass  # no-op; use insert_documents instead
 
     def insert_documents(self, collection_name, document_list):
-        collection = self.db[collection_name]
-        for document in document_list:
-            collection.update_one(
-                {"_id": document["_id"]}, {"$set": document}, upsert=True
-            )
-        return
+        supabase = get_supabase()
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
 
-    def find_documents(self, collection_name, query, keys_to_include={}):
-        collection = self.db[collection_name]
-        return collection.find(query, keys_to_include).limit(10)
+        recent_docs = [
+            doc for doc in document_list
+            if doc.get("articlePubDate") and doc["articlePubDate"] >= seven_days_ago
+        ]
+
+        if not recent_docs:
+            return []
+
+        rows = []
+        seen_ids = set()
+        for doc in recent_docs:
+            doc_id = doc.get("_id")
+            if not doc_id or doc_id in seen_ids:
+                continue
+            seen_ids.add(doc_id)
+
+            raw_tags = doc.get("tags", [])
+            if isinstance(raw_tags, str):
+                tags = [t.strip() for t in raw_tags.split(",") if t.strip()] if raw_tags.strip() else []
+            elif isinstance(raw_tags, list):
+                tags = raw_tags
+            else:
+                tags = []
+
+            rows.append({
+                "id": doc_id,
+                "title": doc.get("title"),
+                "content": doc.get("content"),
+                "authors": doc.get("authors"),
+                "tags": tags,
+                "image": doc.get("image"),
+                "created_at": (
+                    doc["articlePubDate"].isoformat()
+                    if doc.get("articlePubDate") else None
+                ),
+                "source": doc.get("source"),
+                "genre": doc.get("genre"),
+                "language": doc.get("language", "en-us"),
+                "media_origin": doc.get("media_origin"),
+            })
+
+        try:
+            result = supabase.table("news").upsert(
+                rows, on_conflict="id"
+            ).execute()
+            return [r.get("news_link") for r in (result.data or [])]
+        except Exception as e:
+            logger.error(f"Failed to upsert articles: {e}")
+            return []
+
+    def find_documents(self, collection_name, query, keys_to_include=None):
+        return []
 
     def find_documents_count(self, collection_name, query):
-        collection = self.db[collection_name]
-        return collection.count_documents(query)
+        return 0
 
 
 class FeedParser:
