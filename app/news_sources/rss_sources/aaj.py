@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import cloudscraper
 
-from app.utilities import MongoDBClient, get_random_headers
+from app.utilities import get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ class AajTVBusinessRSSPipeline:
                     )
 
                     article = {
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -196,7 +197,6 @@ class AajTVBusinessRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run Aaj TV Business RSS pipeline and insert into MongoDB."""
         try:
             all_articles = []
 
@@ -206,11 +206,9 @@ class AajTVBusinessRSSPipeline:
 
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}
+            
+            result = SupabaseClient.insert_articles(all_articles)
 
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
-            )
             return result
 
         except Exception as e:
