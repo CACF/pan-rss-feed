@@ -38,6 +38,12 @@ from app.news_sources.rss_sources.zameen_com import ZameenRSSPipeline
 from app.news_sources.rss_sources.graana_com import GraanaRSSPipeline
 from app.news_sources.rss_sources.APP import APPBusinessRSSPipeline
 from app.news_sources.rss_sources.pakbiz import PakbizRSSPipeline
+from app.news_sources.rss_sources.Asports import ASportsFootballRSSPipeline
+from app.news_sources.rss_sources.Tensports import TenSportsRSSPipeline
+from app.news_sources.rss_sources.espn import ESPNScraper
+from app.news_sources.rss_sources.GuardianFootball import GuardianFootballRSSPipeline
+from app.news_sources.rss_sources.YahooSports import YahooSportsRSSPipeline
+from app.news_sources.rss_sources.cbsSports import CBSSportsScraper
 
 logger = logging.getLogger(__name__)
 
@@ -70,5 +76,11 @@ PIPELINE_MAP = {
     "zameen_com" : ZameenRSSPipeline,
     "graana_com" : GraanaRSSPipeline,
     "pakbiz" : PakbizRSSPipeline,
-    "techx" : TechXRSSPipeline
+    "techx" : TechXRSSPipeline,
+    "Asports" : ASportsFootballRSSPipeline,
+    "Tensports" : TenSportsRSSPipeline,
+    "espn" : ESPNScraper,
+    "GuardianFootball" : GuardianFootballRSSPipeline,
+    "yahosports" : YahooSportsRSSPipeline,
+    "cbsSports" : CBSSportsScraper
 }
