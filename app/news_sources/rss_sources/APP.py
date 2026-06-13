@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,8 @@ class APPBusinessRSSPipeline:
     SOURCE = "Associated Press Of Pakistan"
 
     RSS_FEEDS = [
-        "https://www.app.com.pk/business/feed/"
+        "https://www.app.com.pk/business/feed/",
+        "https://www.app.com.pk/sports/feed/"
     ]
 
     HEADERS = {
@@ -132,7 +134,7 @@ class APPBusinessRSSPipeline:
                         continue
 
                     articles.append({
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
@@ -141,9 +143,15 @@ class APPBusinessRSSPipeline:
                         "language": "en-us",
                         "source": APPBusinessRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": "Business / Finance",
+                        "genre": (
+                                    "Business"
+                                    if "business" in feed_url.lower()
+                                    else "Sports"
+                                    if "sports" in feed_url.lower()
+                                    else ""
+                                ),
                         "media_origin": "local",
-                        "tags": "",
+                        "tags": [],
                     })
 
                 except Exception as e:
@@ -180,18 +188,26 @@ class APPBusinessRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run pipeline and insert into MongoDB."""
-        start = time.perf_counter()
-        articles = APPBusinessRSSPipeline.process_input(input_data)
+        try:
+            all_articles = APPBusinessRSSPipeline.process_input()
 
-        if not articles:
-            return {"inserted_count": 0, "total_articles": 0}
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
 
-        result = MongoDBClient.insert_articles_to_mongo(
-            articles,
-            user_email=input_data.get("email") if input_data else None,
-        )
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
 
-        result["elapsed_time"] = round(time.perf_counter() - start, 2)
-        logger.info(f"APP pipeline finished in {result['elapsed_time']}s")
-        return result
+            result = SupabaseClient.insert_articles(all_articles)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"APP RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

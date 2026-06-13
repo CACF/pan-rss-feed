@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class TheRegisterRSSPipeline:
                         continue
 
                     articles.append({
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
@@ -184,19 +185,33 @@ class TheRegisterRSSPipeline:
     
     @staticmethod
     def run_pipeline(input_data=None):
-        start = time.perf_counter()
+        try:
+            all_articles = TheRegisterRSSPipeline.process_input()
 
-        articles = TheRegisterRSSPipeline.process_input(input_data)
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
 
-        if not articles:
-            return {"inserted_count": 0, "total_articles": 0}
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
 
-        result = MongoDBClient.insert_articles_to_mongo(
-            articles,
-            user_email=input_data.get("email") if input_data else None,
-        )
+            if not all_articles:
+                return {
+                    "inserted_count": 0,
+                    "total_articles": 0,
+                    "message": "No articles found",
+                }
 
-        result["elapsed_time"] = round(time.perf_counter() - start, 2)
-        logger.info(f"The Register pipeline finished in {result['elapsed_time']}s")
+            result = SupabaseClient.insert_articles(all_articles)
 
-        return result
+            return result
+
+        except Exception as e:
+            logger.error(f"The Register RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

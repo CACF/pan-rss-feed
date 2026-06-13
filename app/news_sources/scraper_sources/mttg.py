@@ -7,6 +7,8 @@ from app.utilities import MongoDBClient, get_random_headers
 import concurrent.futures
 import requests
 
+from app.utils.supabase_client import SupabaseClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -128,7 +130,7 @@ class MettisglobalBusinessScraper:
            
             build_date = datetime.now(timezone.utc)
             article = {
-                "_id": url,
+                "id": url,
                 "article_id": str(uuid.uuid4()),
                 "articlePubDate": pub_date,
                 "feedBuildDate": build_date,
@@ -146,29 +148,48 @@ class MettisglobalBusinessScraper:
             logger.warning(f"Failed to fetch Mettis Global article {url}: {e}")
             return None
 
-    @classmethod
-    def run_pipeline(cls, input_data=None):
-        """Run the Mettis Global scraper pipeline."""
+    @staticmethod
+    def run_pipeline(input_data=None):
         try:
+            article_links = MettisglobalBusinessScraper.fetch_article_links()
+
+            logger.info(
+                f"Found {len(article_links)} article links"
+            )
+
             all_articles = []
 
-            links = cls.fetch_article_links()
-            max_workers = min(8, len(links)) or 1
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(cls.fetch_article, link): link for link in links}
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                futures = {
+                    executor.submit(
+                        MettisglobalBusinessScraper.fetch_article,
+                        url,
+                    ): url
+                    for url in article_links
+                }
+
                 for future in concurrent.futures.as_completed(futures):
                     article = future.result()
                     if article:
                         all_articles.append(article)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=(input_data.get("email") if input_data else None),
+            # Deduplicate by URL
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
             return result
+
         except Exception as e:
             logger.error(f"Mettis Global pipeline failed: {e}")
-            return {"inserted_count": 0, "total_articles": 0, "error": str(e)}
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

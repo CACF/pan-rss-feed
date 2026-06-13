@@ -6,13 +6,17 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
 class TradeChronicleRSSPipeline:
 
     SOURCE = "Trade Chronicle"
-    RSS_FEEDS = ["https://tradechronicle.com/feed/"]
+    RSS_FEEDS = [
+    "https://tradechronicle.com/feed/",
+    "https://tradechronicle.com/category/health-sports/feed/",
+]
     HEADERS = {
         "Accept-Language": "en-US,en;q=0.9",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -115,15 +119,51 @@ class TradeChronicleRSSPipeline:
 
                     title = title_elem.get_text(strip=True)
                     link = link_elem.get_text(strip=True)
-                    article_pub_date = TradeChronicleRSSPipeline.parse_date(pub_date_elem.get_text()) if pub_date_elem else datetime.now(timezone.utc)
-                    content, author = TradeChronicleRSSPipeline.full_description(link)
-                    if not content:
-                        return None 
 
-                    tags = [cat.get_text(strip=True) for cat in category_elems if cat.get_text(strip=True)]
+                    article_pub_date = (
+                        TradeChronicleRSSPipeline.parse_date(pub_date_elem.get_text())
+                        if pub_date_elem
+                        else datetime.now(timezone.utc)
+                    )
+
+                    content, author = TradeChronicleRSSPipeline.full_description(link)
+
+                    if not content:
+                        return None
+
+                    tags = [
+                        cat.get_text(strip=True)
+                        for cat in category_elems
+                        if cat.get_text(strip=True)
+                    ]
+
+                    tag_values = [tag.lower().strip() for tag in tags]
+
+                    # Sports categories found in Trade Chronicle RSS
+                    sports_categories = {
+                        "health & sports",
+                        "sports",
+                        "sport",
+                        "cricket",
+                        "football",
+                        "hockey",
+                        "tennis",
+                        "fifa world cup 2026",
+                    }
+
+                    # Determine genre from categories
+                    if any(category in tag_values for category in sports_categories):
+                        genre = "Sports"
+                    else:
+                        # Everything else defaults to Business
+                        genre = "Business"
+
+                    logger.info(
+                        f"Title={title} | Tags={tags} | Genre={genre}"
+                    )
 
                     return {
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
@@ -132,10 +172,11 @@ class TradeChronicleRSSPipeline:
                         "language": "en-US",
                         "source": TradeChronicleRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": "Business",
+                        "genre": genre,
                         "media_origin": "foreign",
                         "tags": tags,
                     }
+
                 except Exception as e:
                     logger.warning(f"Failed to process RSS item: {e}")
                     return None
@@ -157,16 +198,30 @@ class TradeChronicleRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Fetch all feeds and insert into MongoDB."""
-        all_articles = []
-        for feed_url in TradeChronicleRSSPipeline.RSS_FEEDS:
-            all_articles.extend(TradeChronicleRSSPipeline.fetch_rss_feed(feed_url))
+        try:
+            all_articles = []
 
-        if not all_articles:
-            return {"inserted_count": 0, "total_articles": 0}
+            for feed_url in TradeChronicleRSSPipeline.RSS_FEEDS:
+                articles = TradeChronicleRSSPipeline.fetch_rss_feed(feed_url)
+                all_articles.extend(articles)
 
-        result = MongoDBClient.insert_articles_to_mongo(
-            all_articles,
-            user_email=input_data.get("email") if input_data else None
-        )
-        return result
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Tribune RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

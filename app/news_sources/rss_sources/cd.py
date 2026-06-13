@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import cloudscraper
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +55,6 @@ class CoinDeskRSSPipeline:
 
     @staticmethod
     def fetch_full_description(link):
-        """
-        Fetch full CoinDesk article content.
-        Uses stable selectors.
-        """
         content = None
         author = "Unknown"
 
@@ -74,13 +71,10 @@ class CoinDeskRSSPipeline:
 
                 soup = BeautifulSoup(res.content, "lxml")
 
-                author_elems = soup.select(
-                    'div.font-sans a:first-of-type'
-                )
+                author_elems = soup.select("div.font-sans a:first-of-type")
                 if author_elems:
-                    author = ", ".join(
-                        a.get_text(strip=True) for a in author_elems
-                    )
+                    author = ", ".join(a.get_text(strip=True) for a in author_elems)
+
                 paragraphs = soup.select("div[data-module-name='article-body'] p")
 
                 text_parts = [
@@ -140,19 +134,18 @@ class CoinDeskRSSPipeline:
                     if item.description
                     else ""
                 )
+
                 creators = item.find_all("dc:creator")
                 rss_authors = ", ".join(c.get_text(strip=True) for c in creators)
 
-                base_articles.append(
-                    {
-                        "title": title,
-                        "link": link,
-                        "description": desc,
-                        "pub_date": pub_date,
-                        "feed_date": feed_date,
-                        "rss_authors": rss_authors,
-                    }
-                )
+                base_articles.append({
+                    "title": title,
+                    "link": link,
+                    "description": desc,
+                    "pub_date": pub_date,
+                    "feed_date": feed_date,
+                    "rss_authors": rss_authors,
+                })
 
             articles = []
 
@@ -175,8 +168,8 @@ class CoinDeskRSSPipeline:
                         if not content:
                             continue
 
-                        article = {
-                            "_id": base["link"],
+                        articles.append({
+                            "id": base["link"],
                             "article_id": str(uuid.uuid4()),
                             "articlePubDate": base["pub_date"],
                             "feedBuildDate": base["feed_date"],
@@ -188,9 +181,7 @@ class CoinDeskRSSPipeline:
                             "genre": "Crypto",
                             "media_origin": "foreign",
                             "tags": [],
-                        }
-
-                        articles.append(article)
+                        })
 
                     except Exception as e:
                         logger.warning(f"CoinDesk article processing error: {e}")
@@ -214,21 +205,22 @@ class CoinDeskRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        t0 = time.perf_counter()
-        articles = CoinDeskRSSPipeline.process_input(input_data)
+        try:
+            all_articles = CoinDeskRSSPipeline.process_input()
 
-        if not articles:
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
+
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
+
+        except Exception as e:
+            logger.error(f"CoinDesk pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
-                "elapsed_time": round(time.perf_counter() - t0, 2),
+                "error": str(e),
             }
-
-        result = MongoDBClient.insert_articles_to_mongo(
-            articles,
-            user_email=input_data.get("email") if input_data else None,
-        )
-        result["elapsed_time"] = round(time.perf_counter() - t0, 2)
-
-        logger.info(f"CoinDesk pipeline finished in {result['elapsed_time']}s")
-        return result

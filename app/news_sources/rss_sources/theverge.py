@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ class TheVergeRSSPipeline:
                     categories = [cat.get("term") for cat in entry.find_all("category") if cat.get("term")]
 
                     articles.append({
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -158,14 +159,33 @@ class TheVergeRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        start = time.perf_counter()
-        articles = TheVergeRSSPipeline.process_input(input_data)
-        if not articles:
-            return {"inserted_count": 0, "total_articles": 0}
-        result = MongoDBClient.insert_articles_to_mongo(
-            articles,
-            user_email=input_data.get("email") if input_data else None,
-        )
-        result["elapsed_time"] = round(time.perf_counter() - start, 2)
-        logger.info(f"The Verge pipeline finished in {result['elapsed_time']}s")
-        return result
+        try:
+            all_articles = TheVergeRSSPipeline.process_input()
+
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            if not all_articles:
+                return {
+                    "inserted_count": 0,
+                    "total_articles": 0,
+                    "message": "No articles found",
+                }
+
+            result = SupabaseClient.insert_articles(all_articles)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"The Verge RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

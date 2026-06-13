@@ -6,7 +6,9 @@ import concurrent.futures
 from bs4 import BeautifulSoup
 import re
 import requests
+
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,6 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def parse_date(date_str):
-        """Parse RSS pubDate into datetime object."""
         formats = [
             "%a, %d %b %Y %H:%M:%S %Z",
             "%a, %d %b %Y %H:%M:%S %z",
@@ -46,7 +47,6 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def clean_content(text):
-        """Clean text: remove URLs, extra spaces."""
         if not text:
             return ""
         text = re.sub(r"http\S+|www\.\S+", "", text)
@@ -54,21 +54,22 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def full_description(link):
-        """
-        Fetch full article content and author from Decrypt article page.
-        """
         content = None
         author = "Unknown"
-        paragraphs = []
 
         if not link:
             return None, author
 
         try:
-            res = requests.get(link, timeout=30, headers=get_random_headers(DecryptRSSPipeline.HEADERS))
+            res = requests.get(
+                link,
+                timeout=30,
+                headers=get_random_headers(DecryptRSSPipeline.HEADERS),
+            )
             res.raise_for_status()
             soup = BeautifulSoup(res.text, "lxml")
 
+            paragraphs = []
             for p in soup.select("div[class*='grid-cols-'] p span"):
                 text = p.get_text(strip=True)
                 if len(text) < 30:
@@ -91,30 +92,40 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def fetch_decrypt_rss_feed(feed_url):
-        """Fetch and parse a single Decrypt RSS feed."""
         try:
             logger.info(f"Fetching Decrypt RSS feed: {feed_url}")
-            response = requests.get(feed_url, timeout=30, headers=get_random_headers(DecryptRSSPipeline.HEADERS))
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, "lxml-xml")
 
+            response = requests.get(
+                feed_url,
+                timeout=30,
+                headers=get_random_headers(DecryptRSSPipeline.HEADERS),
+            )
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.content, "lxml-xml")
             items = soup.find_all("item")
             feed_build_date = datetime.now(timezone.utc)
 
             articles = []
+
             for item in items:
                 try:
                     title = item.find("title").get_text(strip=True)
                     link = item.find("link").get_text(strip=True)
+
                     pub_date = item.find("pubDate")
-                    article_pub_date = DecryptRSSPipeline.parse_date(pub_date.get_text()) if pub_date else feed_build_date
+                    article_pub_date = (
+                        DecryptRSSPipeline.parse_date(pub_date.get_text())
+                        if pub_date
+                        else feed_build_date
+                    )
 
                     content, author = DecryptRSSPipeline.full_description(link)
                     if not content:
                         continue
 
                     articles.append({
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
@@ -125,11 +136,11 @@ class DecryptRSSPipeline:
                         "content": content,
                         "genre": "Crypto",
                         "media_origin": "foreign",
-                        "tags": "",
+                        "tags": [],
                     })
 
                 except Exception as e:
-                    logger.warning(f"Failed to process item {item}: {e}")
+                    logger.warning(f"Failed to process item: {e}")
                     continue
 
             logger.info(f"Parsed {len(articles)} articles from {feed_url}")
@@ -141,12 +152,18 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def process_input(input_data=None):
-        """Process all Decrypt RSS feeds concurrently."""
         all_articles = []
         logger.info("Starting Decrypt RSS pipeline (concurrent)")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(DecryptRSSPipeline.fetch_decrypt_rss_feed, feed) for feed in DecryptRSSPipeline.RSS_FEEDS]
+            futures = [
+                executor.submit(
+                    DecryptRSSPipeline.fetch_decrypt_rss_feed,
+                    feed
+                )
+                for feed in DecryptRSSPipeline.RSS_FEEDS
+            ]
+
             for future in concurrent.futures.as_completed(futures):
                 try:
                     all_articles.extend(future.result())
@@ -158,17 +175,21 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run the Decrypt RSS pipeline and insert into MongoDB."""
-        start = time.perf_counter()
-        articles = DecryptRSSPipeline.process_input(input_data)
+        try:
+            all_articles = DecryptRSSPipeline.process_input()
 
-        if not articles:
-            return {"inserted_count": 0, "total_articles": 0}
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
 
-        result = MongoDBClient.insert_articles_to_mongo(
-            articles,
-            user_email=input_data.get("email") if input_data else None,
-        )
-        result["elapsed_time"] = round(time.perf_counter() - start, 2)
-        logger.info(f"Decrypt pipeline finished in {result['elapsed_time']}s")
-        return result
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
+
+        except Exception as e:
+            logger.error(f"Decrypt RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

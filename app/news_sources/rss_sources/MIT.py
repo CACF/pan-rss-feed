@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +121,7 @@ class MITTechnologyReviewAIRSSPipeline:
                     ]
 
                     article = {
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -153,23 +154,24 @@ class MITTechnologyReviewAIRSSPipeline:
             all_articles = []
 
             for feed_url in MITTechnologyReviewAIRSSPipeline.RSS_FEEDS:
-                articles = MITTechnologyReviewAIRSSPipeline.fetch_rss_feed(
-                    feed_url
-                )
+                articles = MITTechnologyReviewAIRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
 
             return result
 
         except Exception as e:
-            logger.error(f"MIT AI RSS pipeline failed: {e}")
+            logger.error(f"Tribune RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

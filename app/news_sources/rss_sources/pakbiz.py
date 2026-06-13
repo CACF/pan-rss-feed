@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import cloudscraper
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class PakbizRSSPipeline:
                         continue
 
                     article = {
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -175,8 +176,6 @@ class PakbizRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run Pakbiz RSS pipeline"""
-
         try:
             all_articles = []
 
@@ -184,18 +183,26 @@ class PakbizRSSPipeline:
                 articles = PakbizRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
 
-            return result
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            if not all_articles:
+                return {
+                    "inserted_count": 0,
+                    "total_articles": 0,
+                    "message": "No articles found",
+                }
+
+            return SupabaseClient.insert_articles(all_articles)
 
         except Exception as e:
-            logger.error(f"Pakbiz pipeline failed: {e}")
+            logger.error(f"Pakbiz RSS pipeline failed: {e}")
 
             return {
                 "inserted_count": 0,

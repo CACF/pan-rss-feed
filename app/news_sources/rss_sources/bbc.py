@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import cloudscraper
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -169,13 +170,13 @@ class BBCRSSPipeline:
                             continue
 
                         article = {
-                            "_id": base["link"],
+                            "id": base["link"],
                             "article_id": str(uuid.uuid4()),
                             "articlePubDate": base["pub_date"],
                             "feedBuildDate": base["feed_date"],
                             "title": base["title"],
                             "authors": author,
-                            "language": "en-gb",
+                            "language": "en",
                             "source": BBCRSSPipeline.SOURCE,
                             "content": content,
                             "genre": "Business",
@@ -205,21 +206,25 @@ class BBCRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        t0 = time.perf_counter()
-        articles = BBCRSSPipeline.process_input(input_data)
+        try:
+            all_articles = BBCRSSPipeline.process_input()
 
-        if not articles:
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
+            return result
+
+        except Exception as e:
+            logger.error(f"BBC RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
-                "elapsed_time": round(time.perf_counter() - t0, 2),
+                "error": str(e),
             }
-
-        result = MongoDBClient.insert_articles_to_mongo(
-            articles,
-            user_email=input_data.get("email") if input_data else None,
-        )
-        result["elapsed_time"] = round(time.perf_counter() - t0, 2)
-
-        logger.info(f"BBC pipeline finished in {result['elapsed_time']}s")
-        return result

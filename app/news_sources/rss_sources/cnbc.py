@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ class CNBCRSSPipeline:
                         description_text = ""
 
                     article = {
-                        "_id": link,
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
@@ -161,9 +162,9 @@ class CNBCRSSPipeline:
                         "language": "en-us",
                         "source": CNBCRSSPipeline.SOURCE,
                         "content": description_text,
-                        "genre": type_elem.get_text().strip() if type_elem else "Business",
+                        "genre":"Business",
                         "media_origin": "foreign",
-                        "tags": "",
+                        "tags": [],
                     }
 
                     articles.append(article)
@@ -211,22 +212,42 @@ class CNBCRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run the complete CNBC RSS pipeline with timing."""
         try:
             logger.info("Starting CNBC RSS pipeline")
-            t0 = time.perf_counter()
-            articles = CNBCRSSPipeline.process_input(input_data)
-            if not articles:
-                elapsed = time.perf_counter() - t0
-                return {"inserted_count": 0, "total_articles": 0, "elapsed_time": round(elapsed, 2)}
 
-            result = MongoDBClient.insert_articles_to_mongo(
-                articles, user_email=input_data.get("email") if input_data else None
+            all_articles = CNBCRSSPipeline.process_input()
+
+            # Deduplicate by article link
+            all_articles = list(
+                {
+                    article["id"]: article
+                    for article in all_articles
+                }.values()
             )
-            result["elapsed_time"] = round(time.perf_counter() - t0, 2)
-            logger.info(f"CNBC pipeline finished in {result['elapsed_time']:.2f}s")
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            if not all_articles:
+                return {
+                    "inserted_count": 0,
+                    "total_articles": 0,
+                }
+
+            result = SupabaseClient.insert_articles(
+                all_articles
+            )
+
             return result
+
         except Exception as e:
-            elapsed = time.perf_counter()
-            logger.error(f"CNBC RSS pipeline failed: {e}")
-            return {"inserted_count": 0, "total_articles": 0, "error": str(e), "elapsed_time": round(elapsed, 2)}
+            logger.exception(
+                f"CNBC RSS pipeline failed: {e}"
+            )
+
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

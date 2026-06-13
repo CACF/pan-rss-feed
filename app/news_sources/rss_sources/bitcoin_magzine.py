@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import cloudscraper
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,6 @@ class BitcoinMagazineRSSPipeline:
 
     @staticmethod
     def parse_date(date_str):
-        """Parse RSS pubDate to UTC datetime."""
         if not date_str:
             return datetime.now(timezone.utc)
 
@@ -40,20 +40,10 @@ class BitcoinMagazineRSSPipeline:
 
     @staticmethod
     def clean_author(author_text):
-        """Normalize dc:creator author."""
-        if not author_text:
-            return "Bitcoin Magazine Staff"
-
-        return author_text.strip()
+        return author_text.strip() if author_text else "Bitcoin Magazine Staff"
 
     @staticmethod
     def clean_content(content_html):
-        """
-        Clean WordPress HTML:
-        - Remove images, figures, scripts
-        - Strip links
-        - Normalize whitespace
-        """
         if not content_html:
             return ""
 
@@ -76,7 +66,6 @@ class BitcoinMagazineRSSPipeline:
 
     @staticmethod
     def fetch_rss_feed(feed_url):
-        """Fetch and parse Bitcoin Magazine RSS feed."""
         try:
             logger.info(f"Fetching Bitcoin Magazine RSS: {feed_url}")
 
@@ -115,9 +104,7 @@ class BitcoinMagazineRSSPipeline:
                     link = link_elem.get_text(strip=True)
 
                     pub_date = (
-                        BitcoinMagazineRSSPipeline.parse_date(
-                            pub_date_elem.get_text()
-                        )
+                        BitcoinMagazineRSSPipeline.parse_date(pub_date_elem.get_text())
                         if pub_date_elem
                         else datetime.now(timezone.utc)
                     )
@@ -130,14 +117,9 @@ class BitcoinMagazineRSSPipeline:
                         else ""
                     )
 
-                    content = BitcoinMagazineRSSPipeline.clean_content(
-                        raw_content
-                    )
+                    content = BitcoinMagazineRSSPipeline.clean_content(raw_content)
 
                     if len(content) < 300:
-                        logger.info(
-                            f"Skipped '{title}' (content too short)"
-                        )
                         continue
 
                     author = (
@@ -148,8 +130,8 @@ class BitcoinMagazineRSSPipeline:
                         else "Bitcoin Magazine Staff"
                     )
 
-                    article = {
-                        "_id": link,
+                    articles.append({
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -161,48 +143,38 @@ class BitcoinMagazineRSSPipeline:
                         "genre": "Crypto / Bitcoin",
                         "media_origin": "international",
                         "tags": [],
-                    }
-
-                    articles.append(article)
+                    })
 
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to process Bitcoin Magazine item: {e}"
-                    )
+                    logger.warning(f"Failed to process Bitcoin Magazine item: {e}")
                     continue
 
-            logger.info(
-                f"Parsed {len(articles)} Bitcoin Magazine articles."
-            )
+            logger.info(f"Parsed {len(articles)} Bitcoin Magazine articles.")
             return articles
 
         except Exception as e:
-            logger.error(f"RSS fetch failed: {e}")
+            logger.error(f"Bitcoin Magazine RSS fetch failed: {e}")
             return []
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run pipeline and insert into MongoDB."""
         try:
             all_articles = []
 
             for feed_url in BitcoinMagazineRSSPipeline.RSS_FEEDS:
-                articles = BitcoinMagazineRSSPipeline.fetch_rss_feed(
-                    feed_url
-                )
+                articles = BitcoinMagazineRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
-            return result
+
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
 
         except Exception as e:
-            logger.error(f"Bitcoin Magazine pipeline failed: {e}")
+            logger.error(f"Bitcoin Magazine RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

@@ -8,6 +8,8 @@ from app.utilities import MongoDBClient, get_random_headers
 import concurrent.futures
 import requests
 
+from app.utils.supabase_client import SupabaseClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,7 +139,7 @@ class FinancialDailyBusinessPipeline:
                 return None
 
             article = {
-                "_id": url,
+                "id": url,
                 "article_id": str(uuid.uuid4()),
                 "articlePubDate": pub_date,
                 "feedBuildDate": datetime.now(timezone.utc),
@@ -156,32 +158,32 @@ class FinancialDailyBusinessPipeline:
             logger.warning(f"Failed to fetch article {url}: {e}")
             return None
 
-    @classmethod
-    def run_pipeline(cls, input_data=None):
-        """Run the scraper pipeline."""
+    @staticmethod
+    def run_pipeline(input_data=None):
         try:
             all_articles = []
-            article_links = cls.fetch_article_links()
-            max_workers = min(8, len(article_links)) or 1
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(cls.fetch_article, link): link for link in article_links}
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        article = future.result()
-                        if article:
-                            all_articles.append(article)
-                    except Exception as e:
-                        logger.warning(f"Error fetching article in pool: {e}")
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
+            for feed_url in FinancialDailyBusinessPipeline.RSS_FEEDS:
+                articles = FinancialDailyBusinessPipeline.fetch_rss_feed(feed_url)
+                all_articles.extend(articles)
 
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=(input_data.get("email") if input_data else None),
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
             return result
 
         except Exception as e:
-            logger.error(f"Financial Daily pipeline failed: {e}")
-            return {"inserted_count": 0, "total_articles": 0, "error": str(e)}
+            logger.error(f"Tribune RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }

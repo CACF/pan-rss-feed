@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import cloudscraper
 
-from app.utilities import MongoDBClient, get_random_headers
+from app.utilities import get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,13 @@ class ProPakistaniBusinessRSSPipeline:
         "https://propakistani.pk/category/business/feed/",
     ]
 
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/rss+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
     @staticmethod
     def parse_date(date_str):
-        """Parse RSS pubDate to datetime (UTC normalized)."""
         if not date_str:
             return datetime.now(timezone.utc)
 
@@ -40,36 +45,20 @@ class ProPakistaniBusinessRSSPipeline:
 
     @staticmethod
     def clean_content(content_html):
-        """
-        Clean WordPress HTML into readable text:
-        - Prefer content:encoded
-        - Remove scripts, styles, images, lead forms
-        - Remove WP boilerplate
-        - Normalize whitespace
-        """
         if not content_html:
             return ""
 
         try:
             soup = BeautifulSoup(content_html, "html.parser")
 
-            for tag in soup(
-                [
-                    "script",
-                    "style",
-                    "iframe",
-                    "noscript",
-                    "img",
-                    "figure",
-                    "form",
-                    "span",
-                ]
-            ):
+            for tag in soup([
+                "script", "style", "iframe", "noscript",
+                "img", "figure", "form", "span"
+            ]):
                 tag.decompose()
 
             text = soup.get_text(separator=" ")
 
-            # Remove WP boilerplate
             text = re.sub(
                 r"The post .*? appeared first on .*?\.",
                 "",
@@ -87,7 +76,6 @@ class ProPakistaniBusinessRSSPipeline:
 
     @staticmethod
     def fetch_rss_feed(feed_url):
-        """Fetch and parse ProPakistani Business RSS feed."""
         try:
             logger.info(f"Fetching ProPakistani RSS feed: {feed_url}")
 
@@ -95,7 +83,7 @@ class ProPakistaniBusinessRSSPipeline:
                 response = scraper.get(
                     feed_url,
                     timeout=30,
-                    headers=get_random_headers(),
+                    headers=get_random_headers(ProPakistaniBusinessRSSPipeline.HEADERS),
                 )
                 try:
                     response.raise_for_status()
@@ -127,9 +115,7 @@ class ProPakistaniBusinessRSSPipeline:
                     link = link_elem.get_text(strip=True)
 
                     pub_date = (
-                        ProPakistaniBusinessRSSPipeline.parse_date(
-                            pub_date_elem.get_text()
-                        )
+                        ProPakistaniBusinessRSSPipeline.parse_date(pub_date_elem.get_text())
                         if pub_date_elem
                         else datetime.now(timezone.utc)
                     )
@@ -142,16 +128,9 @@ class ProPakistaniBusinessRSSPipeline:
                         else ""
                     )
 
-                    content = (
-                        ProPakistaniBusinessRSSPipeline.clean_content(
-                            raw_content
-                        )
-                    )
+                    content = ProPakistaniBusinessRSSPipeline.clean_content(raw_content)
 
                     if len(content) < 200:
-                        logger.info(
-                            f"Skipped article '{title}' (content < 200 chars)"
-                        )
                         continue
 
                     authors = (
@@ -166,8 +145,8 @@ class ProPakistaniBusinessRSSPipeline:
                         if cat.get_text(strip=True)
                     ]
 
-                    article = {
-                        "_id": link,
+                    articles.append({
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -179,56 +158,38 @@ class ProPakistaniBusinessRSSPipeline:
                         "genre": "Business",
                         "media_origin": "local",
                         "tags": tags,
-                    }
-
-                    articles.append(article)
+                    })
 
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to process ProPakistani item: {e}"
-                    )
+                    logger.warning(f"Failed to process ProPakistani item: {e}")
                     continue
 
-            logger.info(
-                f"Parsed {len(articles)} ProPakistani business articles."
-            )
+            logger.info(f"Parsed {len(articles)} ProPakistani business articles.")
             return articles
 
         except Exception as e:
-            logger.error(
-                f"Failed to fetch ProPakistani RSS feed: {e}"
-            )
+            logger.error(f"Failed to fetch ProPakistani RSS feed: {e}")
             return []
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run ProPakistani Business RSS pipeline and insert into MongoDB."""
         try:
             all_articles = []
 
-            for feed_url in (
-                ProPakistaniBusinessRSSPipeline.RSS_FEEDS
-            ):
-                articles = (
-                    ProPakistaniBusinessRSSPipeline.fetch_rss_feed(
-                        feed_url
-                    )
-                )
+            for feed_url in ProPakistaniBusinessRSSPipeline.RSS_FEEDS:
+                articles = ProPakistaniBusinessRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
-            return result
+
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
 
         except Exception as e:
-            logger.error(
-                f"ProPakistani RSS pipeline failed: {e}"
-            )
+            logger.error(f"ProPakistani RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

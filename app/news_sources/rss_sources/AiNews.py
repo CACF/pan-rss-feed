@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +19,18 @@ class AIBusinessStrategyRSSPipeline:
         "https://www.artificialintelligence-news.com/categories/inside-ai/ai-business-strategy/feed/"
     ]
 
-
     @staticmethod
     def parse_date(date_str):
         if not date_str:
             return datetime.now(timezone.utc)
 
         try:
-            dt = datetime.strptime(date_str.strip(), "%a, %d %b %Y %H:%M:%S %z")
+            dt = datetime.strptime(
+                date_str.strip(),
+                "%a, %d %b %Y %H:%M:%S %z"
+            )
             return dt.astimezone(timezone.utc)
+
         except Exception:
             logger.warning(f"Invalid date format: {date_str}")
             return datetime.now(timezone.utc)
@@ -37,13 +41,13 @@ class AIBusinessStrategyRSSPipeline:
             return ""
 
         soup = BeautifulSoup(content_html, "html.parser")
+
         for tag in soup(["script", "style", "iframe", "noscript", "img", "figure"]):
             tag.decompose()
+
         for p in soup.find_all("p"):
-            if "The post" in p.get_text():
-                p.decompose()
-        for p in soup.find_all("p"):
-            if not p.get_text(strip=True):
+            text = p.get_text(strip=True)
+            if "The post" in text or not text:
                 p.decompose()
 
         text = soup.get_text(separator=" ")
@@ -100,12 +104,9 @@ class AIBusinessStrategyRSSPipeline:
                         else ""
                     )
 
-                    content = AIBusinessStrategyRSSPipeline.clean_content(
-                        raw_content
-                    )
+                    content = AIBusinessStrategyRSSPipeline.clean_content(raw_content)
 
                     if len(content) < 300:
-                        logger.info(f"Skipped short article: {title}")
                         continue
 
                     author = (
@@ -117,10 +118,11 @@ class AIBusinessStrategyRSSPipeline:
                     categories = [
                         cat.get_text(strip=True)
                         for cat in item.find_all("category")
+                        if cat.get_text(strip=True)
                     ]
 
-                    article = {
-                        "_id": link,
+                    articles.append({
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -132,9 +134,7 @@ class AIBusinessStrategyRSSPipeline:
                         "genre": "AI Business",
                         "media_origin": "foreign",
                         "tags": categories,
-                    }
-
-                    articles.append(article)
+                    })
 
                 except Exception as e:
                     logger.warning(f"Failed to process item: {e}")
@@ -144,7 +144,7 @@ class AIBusinessStrategyRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch RSS feed: {e}")
+            logger.error(f"AIBusinessStrategy RSS fetch failed: {e}")
             return []
 
     @staticmethod
@@ -153,23 +153,19 @@ class AIBusinessStrategyRSSPipeline:
             all_articles = []
 
             for feed_url in AIBusinessStrategyRSSPipeline.RSS_FEEDS:
-                articles = AIBusinessStrategyRSSPipeline.fetch_rss_feed(
-                    feed_url
-                )
+                articles = AIBusinessStrategyRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
 
-            return result
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
 
         except Exception as e:
-            logger.error(f"AI Business Strategy RSS pipeline failed: {e}")
+            logger.error(f"AI Business Strategy pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

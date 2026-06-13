@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,8 @@ class ProfitPakistanTodayRSSPipeline:
 
     SOURCE = "Profit by Pakistan Today"
     RSS_FEEDS = [
-        "https://profit.pakistantoday.com.pk/feed/",
+        # "https://profit.pakistantoday.com.pk/feed/",
+        "https://propakistani.pk/category/sports/feed/"
     ]
 
     headers = {
@@ -127,7 +129,7 @@ class ProfitPakistanTodayRSSPipeline:
                         logger.info(f"Skipped article '{title}' due to content length < 200 chars")
                         continue
                     article = {
-                        "_id": link, 
+                        "id": link, 
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": ProfitPakistanTodayRSSPipeline.parse_date(pub_date),
                         "feedBuildDate": feed_build_date,
@@ -136,7 +138,13 @@ class ProfitPakistanTodayRSSPipeline:
                         "language": "en-us",
                         "source": ProfitPakistanTodayRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": category,
+                        "genre":  (
+                                    "Business"
+                                    if "business" in feed_url.lower()
+                                    else "Sports"
+                                    if "sports" in feed_url.lower()
+                                    else ""
+                                ),
                         "media_origin": "local",
                         "tags": [],
                     }
@@ -190,32 +198,30 @@ class ProfitPakistanTodayRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run the complete Profit RSS pipeline."""
         try:
-            logger.info("Starting Profit RSS pipeline")
-            t0 = time.perf_counter()
+            all_articles = []
 
-            articles = ProfitPakistanTodayRSSPipeline.process_input(input_data)
+            for feed_url in ProfitPakistanTodayRSSPipeline.RSS_FEEDS:
+                articles = ProfitPakistanTodayRSSPipeline.fetch_rss_feed(feed_url)
+                all_articles.extend(articles)
 
-            if not articles:
-                elapsed = round(time.perf_counter() - t0, 2)
-                logger.warning("No Profit articles to insert")
-                return {"inserted_count": 0, "total_articles": 0, "elapsed_time": elapsed}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                articles,
-                user_email=input_data.get("email") if input_data else None,
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
-            result["elapsed_time"] = round(time.perf_counter() - t0, 2)
-            logger.info(f"Profit pipeline finished in {result['elapsed_time']}s")
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
             return result
 
         except Exception as e:
-            elapsed = round(time.perf_counter(), 2)
-            logger.error(f"Profit RSS pipeline failed: {e}")
+            logger.error(f"Tribune RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
                 "error": str(e),
-                "elapsed_time": elapsed,
             }

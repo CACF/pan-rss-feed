@@ -7,42 +7,39 @@ import cloudscraper
 from deep_translator import GoogleTranslator
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
 
 class ExpressUrduBusinessRSSPipeline:
- 
+
     SOURCE = "ExpressNews"
     RSS_FEEDS = [
         "https://www.express.pk/feed/business",
     ]
-    
+
+    TRANSLATOR = GoogleTranslator(source="ur", target="en")
 
     @staticmethod
     def translate_urdu_to_english(text: str) -> str:
-        """
-        Translate Urdu text to English using Google Translate (unofficial).
-        Handles long text by chunking (Google limit = 5000 chars).
-        """
         MAX_CHARS = 4500
         if not text:
             return ""
 
         try:
-            translator = GoogleTranslator(source="ur", target="en")
             chunks = []
             start = 0
             text_length = len(text)
 
             while start < text_length:
-                end = start + MAX_CHARS
-                chunk = text[start:end]
-                chunks.append(chunk)
-                start = end
-            translated_chunks = []
-            for chunk in chunks:
-                translated_chunks.append(translator.translate(chunk))
+                chunks.append(text[start:start + MAX_CHARS])
+                start += MAX_CHARS
+
+            translated_chunks = [
+                ExpressUrduBusinessRSSPipeline.TRANSLATOR.translate(chunk)
+                for chunk in chunks
+            ]
 
             return " ".join(translated_chunks)
 
@@ -52,7 +49,6 @@ class ExpressUrduBusinessRSSPipeline:
 
     @staticmethod
     def parse_date(date_str):
-        """Parse RSS pubDate to datetime (UTC normalized)."""
         if not date_str:
             return datetime.now(timezone.utc)
 
@@ -73,12 +69,6 @@ class ExpressUrduBusinessRSSPipeline:
 
     @staticmethod
     def clean_content(content_html):
-        """
-        Clean HTML into readable text:
-        - Remove images
-        - Remove scripts, styles, iframes
-        - Normalize whitespace
-        """
         if not content_html:
             return ""
 
@@ -99,7 +89,6 @@ class ExpressUrduBusinessRSSPipeline:
 
     @staticmethod
     def fetch_rss_feed(feed_url):
-        """Fetch and parse Express Urdu Business RSS feed."""
         try:
             logger.info(f"Fetching Express Urdu RSS feed: {feed_url}")
 
@@ -133,49 +122,28 @@ class ExpressUrduBusinessRSSPipeline:
                         continue
 
                     urdu_title = title_elem.get_text(strip=True)
-                    urdu_description = (
-                        desc_elem.get_text(strip=True) if desc_elem else ""
-                    )
-                    urdu_content = (
-                        content_elem.get_text() if content_elem else urdu_description
-                    )
+                    urdu_description = desc_elem.get_text(strip=True) if desc_elem else ""
+                    urdu_content = content_elem.get_text() if content_elem else urdu_description
 
-                    clean_content = ExpressUrduBusinessRSSPipeline.clean_content(
-                        urdu_content
-                    )
+                    clean_content = ExpressUrduBusinessRSSPipeline.clean_content(urdu_content)
 
                     if len(clean_content) < 200:
-                        logger.info(
-                            f"Skipped article '{urdu_title}' (content < 200 chars)"
-                        )
                         continue
 
-                    title_en = ExpressUrduBusinessRSSPipeline.translate_urdu_to_english(
-                        urdu_title
-                    )
-                    description_en = (
-                        ExpressUrduBusinessRSSPipeline.translate_urdu_to_english(
-                            urdu_description
-                        )
-                    )
-                    content_en = (
-                        ExpressUrduBusinessRSSPipeline.translate_urdu_to_english(
-                            clean_content
-                        )
-                    )
+                    title_en = ExpressUrduBusinessRSSPipeline.translate_urdu_to_english(urdu_title)
+                    description_en = ExpressUrduBusinessRSSPipeline.translate_urdu_to_english(urdu_description)
+                    content_en = ExpressUrduBusinessRSSPipeline.translate_urdu_to_english(clean_content)
 
                     pub_date = (
-                        ExpressUrduBusinessRSSPipeline.parse_date(
-                            pub_date_elem.get_text()
-                        )
+                        ExpressUrduBusinessRSSPipeline.parse_date(pub_date_elem.get_text())
                         if pub_date_elem
                         else datetime.now(timezone.utc)
                     )
 
                     link = link_elem.get_text(strip=True)
 
-                    article = {
-                        "_id": link,
+                    articles.append({
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -188,19 +156,13 @@ class ExpressUrduBusinessRSSPipeline:
                         "genre": "Business",
                         "media_origin": "local",
                         "tags": [],
-                    }
-
-                    articles.append(article)
+                    })
 
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to process Express Urdu article item: {e}"
-                    )
+                    logger.warning(f"Failed to process Express Urdu article item: {e}")
                     continue
 
-            logger.info(
-                f"Parsed {len(articles)} Express Urdu business articles."
-            )
+            logger.info(f"Parsed {len(articles)} Express Urdu business articles.")
             return articles
 
         except Exception as e:
@@ -209,7 +171,6 @@ class ExpressUrduBusinessRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run Express Urdu Business RSS pipeline and insert into MongoDB."""
         try:
             all_articles = []
 
@@ -217,18 +178,16 @@ class ExpressUrduBusinessRSSPipeline:
                 articles = ExpressUrduBusinessRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
-            if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None,
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
 
-            return result
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
 
         except Exception as e:
-            logger.error(f"Express Urdu RSS pipeline failed: {e}")
+            logger.error(f"Express Urdu pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

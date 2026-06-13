@@ -10,6 +10,8 @@ from selenium.webdriver.chrome.options import Options
 from app.utilities import MongoDBClient
 import requests
 
+from app.utils.supabase_client import SupabaseClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -157,7 +159,7 @@ class BusinessRecorderRSSPipeline:
                     continue
 
                 article = {
-                    "_id": link,
+                    "id": link,
                     "article_id": str(uuid.uuid4()),
                     "articlePubDate": article_pub_date,
                     "feedBuildDate": feed_build_date,
@@ -184,42 +186,29 @@ class BusinessRecorderRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None):
         try:
-            logger.info("Starting Business Recorder RSS pipeline")
-            t0 = time.perf_counter()
             all_articles = []
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                future_to_feed = {
-                    executor.submit(BusinessRecorderRSSPipeline.process_feed, feed): feed
-                    for feed in BusinessRecorderRSSPipeline.RSS_FEEDS
-                }
-                for future in concurrent.futures.as_completed(future_to_feed):
-                    try:
-                        articles = future.result()
-                        all_articles.extend(articles)
-                    except Exception as e:
-                        feed = future_to_feed[future]
-                        logger.warning(f"Failed to process feed {feed}: {e}")
+            for feed_url in BusinessRecorderRSSPipeline.RSS_FEEDS:
+                articles = BusinessRecorderRSSPipeline.process_feed(feed_url)
+                all_articles.extend(articles)
 
-            if not all_articles:
-                elapsed = round(time.perf_counter() - t0, 2)
-                logger.warning("No articles found to insert")
-                return {"inserted_count": 0, "total_articles": 0, "elapsed_time": elapsed}
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                all_articles,
-                user_email=input_data.get("email") if input_data else None
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
-            result["elapsed_time"] = round(time.perf_counter() - t0, 2)
-            logger.info(f"Business Recorder pipeline finished in {result['elapsed_time']}s")
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
             return result
 
         except Exception as e:
-            elapsed = round(time.perf_counter() - t0, 2)
-            logger.error(f"Business Recorder RSS pipeline failed: {e}")
+            logger.error(f"Business Recorder pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
                 "error": str(e),
-                "elapsed_time": elapsed
             }

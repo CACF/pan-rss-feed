@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,6 @@ class DawnRSSPipeline:
 
     @staticmethod
     def parse_date(date_str):
-        """Parse RSS pubDate format to datetime."""
         if not date_str:
             return datetime.now(timezone.utc)
 
@@ -54,7 +54,6 @@ class DawnRSSPipeline:
 
     @staticmethod
     def clean_content(content_html):
-        """Convert HTML content into clean, readable text (no links)."""
         if not content_html:
             return ""
 
@@ -76,9 +75,6 @@ class DawnRSSPipeline:
 
     @staticmethod
     def clean_author(author_raw: str) -> str:
-        """
-        Remove emails like none@none.com and strip parentheses.
-        """
         if not author_raw:
             return "Dawn Web Desk"
 
@@ -90,7 +86,6 @@ class DawnRSSPipeline:
 
     @staticmethod
     def fetch_dawn_rss_feed(feed_url):
-        """Fetch and parse a single Dawn RSS feed."""
         try:
             logger.info(f"Fetching Dawn RSS feed: {feed_url}")
             response = requests.get(
@@ -109,7 +104,6 @@ class DawnRSSPipeline:
             feed_build_date = datetime.now(timezone.utc)
 
             if not items:
-                logger.warning(f"No items found in feed: {feed_url}")
                 return []
 
             articles = []
@@ -129,6 +123,7 @@ class DawnRSSPipeline:
 
                     title = title_elem.get_text(strip=True)
                     link = link_elem.get_text(strip=True)
+
                     pub_date = pub_date_elem.get_text(strip=True) if pub_date_elem else ""
                     category = category_elem.get_text(strip=True) if category_elem else "News"
 
@@ -144,13 +139,10 @@ class DawnRSSPipeline:
                     content = DawnRSSPipeline.clean_content(content_html)
 
                     if len(content) < 200:
-                        logger.info(
-                            f"Skipped article '{title}' due to content length < 200 chars"
-                        )
                         continue
 
-                    article = {
-                        "_id": link,
+                    articles.append({
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": DawnRSSPipeline.parse_date(pub_date),
                         "feedBuildDate": feed_build_date,
@@ -159,18 +151,15 @@ class DawnRSSPipeline:
                         "language": "en-us",
                         "source": DawnRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": category,
+                        "genre": "Business",
                         "media_origin": "local",
                         "tags": [category],
-                    }
-
-                    articles.append(article)
+                    })
 
                 except Exception as e:
                     logger.warning(f"Failed to process Dawn article: {e}")
                     continue
 
-            logger.info(f"Parsed {len(articles)} articles from {feed_url}")
             return articles
 
         except Exception as e:
@@ -179,34 +168,22 @@ class DawnRSSPipeline:
 
     @staticmethod
     def process_input(input_data=None):
-        """Fetch and parse multiple Dawn RSS feeds concurrently."""
         try:
-            logger.info("Starting Dawn RSS feed pipeline (concurrent)")
+            logger.info("Starting Dawn RSS pipeline (concurrent)")
             all_articles = []
-            max_workers = 5
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_feed = {
-                    executor.submit(
-                        DawnRSSPipeline.fetch_dawn_rss_feed, feed
-                    ): feed
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = {
+                    executor.submit(DawnRSSPipeline.fetch_dawn_rss_feed, feed): feed
                     for feed in DawnRSSPipeline.RSS_FEEDS
                 }
 
-                for future in concurrent.futures.as_completed(future_to_feed):
-                    feed = future_to_feed[future]
+                for future in concurrent.futures.as_completed(futures):
                     try:
-                        articles = future.result()
-                        all_articles.extend(articles)
-                        logger.info(
-                            f"Feed processed: {feed} -> {len(articles)} articles"
-                        )
+                        all_articles.extend(future.result())
                     except Exception:
-                        logger.exception(f"Feed failed: {feed}")
+                        logger.exception("Feed processing failed")
 
-            logger.info(
-                f"Dawn RSS pipeline processed {len(all_articles)} total articles"
-            )
             return all_articles
 
         except Exception as e:
@@ -215,39 +192,21 @@ class DawnRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run the complete Dawn RSS pipeline."""
         try:
-            logger.info("Running Dawn RSS pipeline")
-            t0 = time.perf_counter()
+            all_articles = DawnRSSPipeline.process_input()
 
-            articles = DawnRSSPipeline.process_input(input_data)
-
-            if not articles:
-                elapsed = round(time.perf_counter() - t0, 2)
-                logger.warning("No Dawn articles to insert")
-                return {
-                    "inserted_count": 0,
-                    "total_articles": 0,
-                    "elapsed_time": elapsed,
-                }
-
-            result = MongoDBClient.insert_articles_to_mongo(
-                articles,
-                user_email=input_data.get("email") if input_data else None,
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
 
-            result["elapsed_time"] = round(time.perf_counter() - t0, 2)
-            logger.info(
-                f"Dawn RSS pipeline finished in {result['elapsed_time']}s"
-            )
-            return result
+            logger.info(f"After dedupe: {len(all_articles)} articles")
+
+            return SupabaseClient.insert_articles(all_articles)
 
         except Exception as e:
-            elapsed = round(time.perf_counter(), 2)
             logger.error(f"Dawn RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
                 "error": str(e),
-                "elapsed_time": elapsed,
             }

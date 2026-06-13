@@ -8,6 +8,7 @@ import cloudscraper
 import concurrent.futures
 
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,7 @@ class ZameenRSSPipeline:
                         continue
 
                     article = {
-                        "_id": unique_key,
+                        "id": unique_key,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": pub_date,
                         "feedBuildDate": feed_build_date,
@@ -216,38 +217,32 @@ class ZameenRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """
-        Run pipeline: fetch RSS, full content, insert to MongoDB, delete old articles.
-        """
         try:
-            all_articles = ZameenRSSPipeline.process_input(input_data)
+            all_articles = ZameenRSSPipeline.process_input()
+
+            # Deduplicate by id
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
+            )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
 
             if not all_articles:
-                return {"inserted_count": 0, "total_articles": 0}
+                return {
+                    "inserted_count": 0,
+                    "total_articles": 0,
+                    "message": "No articles found",
+                }
 
-            connection_string = (
-                f"mongodb://{os.getenv('DB_USER')}:{os.getenv('DB_PW')}@"
-                f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/"
-            )
-            db_name = os.getenv("DB_NAME", "Karobaar")
+            result = SupabaseClient.insert_articles(all_articles)
 
-            with MongoDBClient(connection_string, db_name) as mongo_client:
-                collection = mongo_client.db["DemoNews"]
-                seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-                delete_result = collection.delete_many({
-                    "articlePubDate": {"$lt": seven_days_ago}
-                })
-                logger.info(f"Deleted {delete_result.deleted_count} old articles")
-                inserted_ids = mongo_client.insert_documents("DemoNews", all_articles)
-
-            return {
-                "inserted_count": len(inserted_ids),
-                "total_articles": len(all_articles),
-                "deleted_count": delete_result.deleted_count
-            }
+            return result
 
         except Exception as e:
             logger.error(f"Zameen RSS pipeline failed: {e}")
+
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

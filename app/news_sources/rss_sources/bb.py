@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import requests
 from app.utilities import MongoDBClient, get_random_headers
+from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,7 @@ class BloombergRSSPipeline:
                     article_id = link or (guid_elem.get_text().strip() if guid_elem else str(uuid.uuid4()))
 
                     article = {
-                        "_id": article_id,
+                        "id": article_id,
                         "article_id": str(uuid.uuid4()),
                         "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
@@ -152,19 +153,30 @@ class BloombergRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None):
-        """Run the complete Bloomberg RSS pipeline."""
         try:
-            logger.info("Starting Bloomberg RSS pipeline")
-            articles = BloombergRSSPipeline.process_input(input_data)
+            all_articles = []
 
-            if not articles:
-                logger.warning("No Bloomberg articles to insert")
-                return {"inserted_count": 0, "total_articles": 0}
+            for feed_url in BloombergRSSPipeline.RSS_FEEDS:
+                articles = BloombergRSSPipeline.fetch_rss_feed(feed_url)
+                all_articles.extend(articles)
 
-            result = MongoDBClient.insert_articles_to_mongo(
-                articles, user_email=input_data.get("email") if input_data else None
+            # Deduplicate by id (link)
+            all_articles = list(
+                {article["id"]: article for article in all_articles}.values()
             )
+
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
+
+            result = SupabaseClient.insert_articles(all_articles)
+
             return result
+
         except Exception as e:
-            logger.error(f"Bloomberg RSS pipeline failed: {e}")
-            return {"inserted_count": 0, "total_articles": 0, "error": str(e)}
+            logger.error(f"Tribune RSS pipeline failed: {e}")
+            return {
+                "inserted_count": 0,
+                "total_articles": 0,
+                "error": str(e),
+            }
