@@ -13,6 +13,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
 class SupabaseClient:
 
     @staticmethod
@@ -24,9 +25,9 @@ class SupabaseClient:
 
         # keep only recent articles
         recent_articles = [
-            a for a in article_list
-            if a.get("articlePubDate")
-            and a["articlePubDate"] >= seven_days_ago
+            a
+            for a in article_list
+            if a.get("articlePubDate") and a["articlePubDate"] >= seven_days_ago
         ]
 
         if not recent_articles:
@@ -54,12 +55,6 @@ class SupabaseClient:
 
             cleaned.append(row)
 
-        supabase.table(table_name).upsert(
-            cleaned,
-            on_conflict="id"
-        ).execute()
+        supabase.table(table_name).upsert(cleaned, on_conflict="id").execute()
 
-        return {
-            "inserted_count": len(cleaned),
-            "total_articles": len(cleaned)
-        }
+        return {"inserted_count": len(cleaned), "total_articles": len(cleaned)}

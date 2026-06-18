@@ -15,7 +15,9 @@ class NewsBLC:
             allowed_sources_clean = [src.strip().lower() for src in allowed_sources]
 
             invalid_sources = [
-                src for src in requested_sources_clean if src not in allowed_sources_clean
+                src
+                for src in requested_sources_clean
+                if src not in allowed_sources_clean
             ]
 
             if invalid_sources:
@@ -24,7 +26,9 @@ class NewsBLC:
                 )
 
             filtered_sources = [
-                s for s in allowed_sources if s.strip().lower() in requested_sources_clean
+                s
+                for s in allowed_sources
+                if s.strip().lower() in requested_sources_clean
             ]
         else:
             filtered_sources = allowed_sources

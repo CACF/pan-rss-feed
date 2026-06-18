@@ -32,7 +32,9 @@ from app.news_sources.rss_sources.theregister import TheRegisterRSSPipeline
 from app.news_sources.rss_sources.forbes import ForbesRSSPipeline
 from app.news_sources.rss_sources.phoneworld import PhoneWorldRSSPipeline
 from app.news_sources.rss_sources.techx import TechXRSSPipeline
-from app.news_sources.rss_sources.pakrealestatetimes import PakistanRealEstateTimesRSSPipeline
+from app.news_sources.rss_sources.pakrealestatetimes import (
+    PakistanRealEstateTimesRSSPipeline,
+)
 from app.news_sources.rss_sources.plotistaan import PlotistanRSSPipeline
 from app.news_sources.rss_sources.zameen_com import ZameenRSSPipeline
 from app.news_sources.rss_sources.graana_com import GraanaRSSPipeline
@@ -44,43 +46,53 @@ from app.news_sources.rss_sources.espn import ESPNScraper
 from app.news_sources.rss_sources.GuardianFootball import GuardianFootballRSSPipeline
 from app.news_sources.rss_sources.YahooSports import YahooSportsRSSPipeline
 from app.news_sources.rss_sources.cbsSports import CBSSportsScraper
+from app.news_sources.rss_sources.goal import GoalSportsNewsPipeline
+from app.news_sources.rss_sources.nytimes import NYTSoccerRSSPipeline
+from app.news_sources.rss_sources.foxsports import FoxSportsRSSPipeline
+from app.news_sources.rss_sources.eyefootball import EyefootballRSSPipeline
+from app.news_sources.rss_sources.bostonglobe import BostonGlobeSportsRSSPipeline
 
 logger = logging.getLogger(__name__)
 
 PIPELINE_MAP = {
     # "Reuters": ReutersRSSPipeline,
-    "aaj" : AajTVBusinessRSSPipeline,
+    "aaj": AajTVBusinessRSSPipeline,
     "APP NEWS": APPBusinessRSSPipeline,
     "BBC": BBCRSSPipeline,
-    "CNBC" : CNBCRSSPipeline,
-    "mttg" : MettisglobalBusinessScraper,
-    "trb" : TribuneRSSPipeline,
-    "br" : BusinessRecorderRSSPipeline,
-    "dn" : DawnRSSPipeline,
-    "dp" : DailyPakistanBusinessRSSPipeline,
-    "ary" : ARYNewsBusinessRSSPipeline,
-    "geo" : GeoNewsBusinessRSSPipeline,
-    "exp_pk" : ExpressUrduBusinessRSSPipeline,
-    "bol" : BOLNewsBusinessRSSPipeline,
-    "tc" : TradeChronicleRSSPipeline,
-    "cd" : CoinDeskRSSPipeline,
-    "propak" : ProPakistaniBusinessRSSPipeline,
-    "decrypt" : DecryptRSSPipeline,
-    "bitcoin_magzine" : BitcoinMagazineRSSPipeline,
-    "AiNews" : AIBusinessStrategyRSSPipeline,
-    "MIT" : MITTechnologyReviewAIRSSPipeline,
-    "Techcrunch" : TechCrunchRSSPipeline,
-    "wired" : WiredBusinessRSSPipeline,
-    "theverge" : TheVergeRSSPipeline,
-    "theregister" : TheRegisterRSSPipeline,
-    "zameen_com" : ZameenRSSPipeline,
-    "graana_com" : GraanaRSSPipeline,
-    "pakbiz" : PakbizRSSPipeline,
-    "techx" : TechXRSSPipeline,
-    "Asports" : ASportsFootballRSSPipeline,
-    "Tensports" : TenSportsRSSPipeline,
-    "espn" : ESPNScraper,
-    "GuardianFootball" : GuardianFootballRSSPipeline,
-    "yahosports" : YahooSportsRSSPipeline,
-    "cbsSports" : CBSSportsScraper
+    "CNBC": CNBCRSSPipeline,
+    "mttg": MettisglobalBusinessScraper,
+    "trb": TribuneRSSPipeline,
+    "br": BusinessRecorderRSSPipeline,
+    "dn": DawnRSSPipeline,
+    "dp": DailyPakistanBusinessRSSPipeline,
+    "ary": ARYNewsBusinessRSSPipeline,
+    "geo": GeoNewsBusinessRSSPipeline,
+    "exp_pk": ExpressUrduBusinessRSSPipeline,
+    "bol": BOLNewsBusinessRSSPipeline,
+    "tc": TradeChronicleRSSPipeline,
+    "cd": CoinDeskRSSPipeline,
+    "propak": ProPakistaniBusinessRSSPipeline,
+    "decrypt": DecryptRSSPipeline,
+    "bitcoin_magzine": BitcoinMagazineRSSPipeline,
+    "AiNews": AIBusinessStrategyRSSPipeline,
+    "MIT": MITTechnologyReviewAIRSSPipeline,
+    "Techcrunch": TechCrunchRSSPipeline,
+    "wired": WiredBusinessRSSPipeline,
+    "theverge": TheVergeRSSPipeline,
+    "theregister": TheRegisterRSSPipeline,
+    "zameen_com": ZameenRSSPipeline,
+    "graana_com": GraanaRSSPipeline,
+    "pakbiz": PakbizRSSPipeline,
+    "techx": TechXRSSPipeline,
+    "Asports": ASportsFootballRSSPipeline,
+    "Tensports": TenSportsRSSPipeline,
+    "espn": ESPNScraper,
+    "GuardianFootball": GuardianFootballRSSPipeline,
+    "yahosports": YahooSportsRSSPipeline,
+    "cbsSports": CBSSportsScraper,
+    "goal": GoalSportsNewsPipeline,
+    "nytimes": NYTSoccerRSSPipeline,
+    "foxsports": FoxSportsRSSPipeline,
+    "eyefootball": EyefootballRSSPipeline,
+    "bostonglobe": BostonGlobeSportsRSSPipeline,
 }
