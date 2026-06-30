@@ -51,6 +51,15 @@ from app.news_sources.rss_sources.nytimes import NYTSoccerRSSPipeline
 from app.news_sources.rss_sources.foxsports import FoxSportsRSSPipeline
 from app.news_sources.rss_sources.eyefootball import EyefootballRSSPipeline
 from app.news_sources.rss_sources.bostonglobe import BostonGlobeSportsRSSPipeline
+from app.news_sources.rss_sources.glammagazine import GlamFashionRSSPipeline
+from app.news_sources.rss_sources.fashiontimesmagazine import FashionTimesRSSPipeline
+from app.news_sources.rss_sources.arabnews import ArabNewsFashionRSSPipeline
+from app.news_sources.rss_sources.bridesandyou import BridesAndYouFashionRSSPipeline
+from app.news_sources.rss_sources.tribune_fashion import (
+    ExpressTribuneFashionRSSPipeline,
+)
+from app.news_sources.rss_sources.divaonline import DivaFashionRSSPipeline
+from app.news_sources.rss_sources.hmagpak import HMagFashionPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -95,4 +104,11 @@ PIPELINE_MAP = {
     "foxsports": FoxSportsRSSPipeline,
     "eyefootball": EyefootballRSSPipeline,
     "bostonglobe": BostonGlobeSportsRSSPipeline,
+    "glammagazine": GlamFashionRSSPipeline,  # Fashion
+    "fashiontimesmagazine": FashionTimesRSSPipeline,  # Fashion
+    "arabnews": ArabNewsFashionRSSPipeline,
+    "bridesandyou": BridesAndYouFashionRSSPipeline,
+    "tribune": ExpressTribuneFashionRSSPipeline,
+    "divaonline": DivaFashionRSSPipeline,
+    "hmagpak": HMagFashionPipeline,
 }
