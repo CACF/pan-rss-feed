@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import cloudscraper
 
 from googlenewsdecoder import new_decoderv1
+from urllib.parse import urlparse
 
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
@@ -114,6 +115,140 @@ class HoustonPulseRSSPipeline:
                 return parsed
 
         return None
+
+    @staticmethod
+    def site_specific_cleanup(container, domain):
+        selectors = []
+
+        if "click2houston.com" in domain or "fox44news.com" in domain:
+            selectors = [
+                ".article-meta",
+                ".byline",
+                ".timestamp",
+                ".published",
+                ".social-share",
+                ".share-tools",
+                ".newsletter",
+                ".related",
+                ".caption",
+                ".gallery-caption",
+                ".image-caption",
+                ".photo-credit",
+                ".copyright",
+                ".ad",
+                ".advertisement",
+            ]
+
+        elif "urdupoint.com" in domain:
+            selectors = [
+                ".news-author",
+                ".news-date",
+                ".social-icons",
+                ".related-news",
+                ".sidebar",
+                ".tags",
+                ".ads",
+            ]
+
+        elif "dailyindependent.com.pk" in domain:
+            selectors = [
+                ".td-post-source-tags",
+                ".td-post-author-name",
+                ".td-post-date",
+                ".td-post-sharing",
+                ".td_block_related_posts",
+                ".td-a-rec",
+            ]
+
+        elif "lokmattimes.com" in domain:
+            selectors = [
+                ".author-box",
+                ".post-meta",
+                ".social-share",
+                ".related-posts",
+                ".tags",
+                ".advertisement",
+            ]
+
+        elif "malaysiasun.com" in domain:
+            selectors = [
+                ".author",
+                ".article-meta",
+                ".share",
+                ".related",
+                ".sidebar",
+            ]
+
+        elif "kut.org" in domain:
+            selectors = [
+                ".byline",
+                ".dateblock",
+                ".share-tools",
+                ".donation-banner",
+                ".newsletter",
+            ]
+        elif "dailyindependent.com.pk" in domain:
+            selectors = [
+                ".td-post-author-name",
+                ".td-post-date",
+                ".td-post-sharing",
+                ".td-post-source-tags",
+                ".td-post-next-prev",
+                ".td_block_related_posts",
+                ".td-a-rec",
+                ".td-social-sharing",
+                ".td-post-views",
+                ".td-post-comments",
+                ".td-post-small-box",
+                ".author-box-wrap",
+                ".td-post-featured-image",
+                ".td-post-content .code-block",
+            ]
+
+        elif "dailytimes.com.pk" in domain:
+            selectors = [
+                ".post-meta",
+                ".entry-meta",
+                ".author-box",
+                ".author",
+                ".post-tags",
+                ".sharedaddy",
+                ".jp-relatedposts",
+                ".related-posts",
+                ".sidebar",
+                ".widget",
+                ".advertisement",
+                ".ads",
+                ".code-block",
+                ".social-share",
+                ".post-navigation",
+            ]
+
+        for sel in selectors:
+            for tag in container.select(sel):
+                tag.decompose()
+
+    @staticmethod
+    def clean_article_text(text):
+        if not text:
+            return ""
+
+        patterns = [
+            r"Published:\s*.*?(?=\n|$)",
+            r"Updated:\s*.*?(?=\n|$)",
+            r"Last Updated.*?(?=\n|$)",
+            r"By\s+[A-Z][A-Za-z\s]+(?=\n|$)",
+            r"Copyright\s+\d{4}.*?All rights reserved\.?",
+            r"©\s*\d{4}.*?All rights reserved\.?",
+            r"\(AP Photo.*?\)",
+            r"Photo by .*?(?=\n|$)",
+            r"Image courtesy.*?(?=\n|$)",
+        ]
+
+        for pattern in patterns:
+            text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+
+        return " ".join(text.split())
 
     @staticmethod
     def clean_text(html):
@@ -272,6 +407,10 @@ class HoustonPulseRSSPipeline:
                 html = response.text
 
             soup = BeautifulSoup(html, "lxml")
+            domain = urlparse(link).netloc
+
+            if "fotmob.com" in domain:
+                return result
 
             result["image"] = HoustonPulseRSSPipeline.extract_image(soup)
             result["published"] = HoustonPulseRSSPipeline.extract_published_date(soup)
@@ -295,18 +434,40 @@ class HoustonPulseRSSPipeline:
             for sel in selectors:
                 container = soup.select_one(sel)
                 if container:
+                    HoustonPulseRSSPipeline.site_specific_cleanup(container, domain)
+
                     for p in container.find_all("p"):
-                        text = p.get_text(strip=True)
-                        if len(text) >= 30:
-                            paragraphs.append(HoustonPulseRSSPipeline.clean_text(text))
+                        text = HoustonPulseRSSPipeline.clean_text(str(p))
+                        text = HoustonPulseRSSPipeline.clean_article_text(text)
+
+                        if len(text) < 30:
+                            continue
+
+                        paragraphs.append(text)
+
                     if paragraphs:
                         break
+                # if container:
+                #     for p in container.find_all("p"):
+                #         text = p.get_text(strip=True)
+                #         if len(text) >= 30:
+                #             paragraphs.append(HoustonPulseRSSPipeline.clean_text(text))
+                #     if paragraphs:
+                #         break
 
             if not paragraphs:
                 for p in soup.find_all("p"):
-                    text = p.get_text(strip=True)
-                    if len(text) >= 30:
-                        paragraphs.append(HoustonPulseRSSPipeline.clean_text(text))
+                    text = HoustonPulseRSSPipeline.clean_text(str(p))
+                    text = HoustonPulseRSSPipeline.clean_article_text(text)
+
+                    if len(text) < 30:
+                        continue
+
+                    paragraphs.append(text)
+                # for p in soup.find_all("p"):
+                #     text = p.get_text(strip=True)
+                #     if len(text) >= 30:
+                #         paragraphs.append(HoustonPulseRSSPipeline.clean_text(text))
 
             result["content"] = " ".join(paragraphs)
 
