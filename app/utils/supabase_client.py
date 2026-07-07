@@ -8,17 +8,17 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# Houston-Pulse database
-SUPABASE_HOUSTONPULSE_URL = os.getenv("SUPABASE_HOUSTONPULSE_URL")
-SUPABASE_HOUSTONPULSE_KEY = os.getenv("SUPABASE_HOUSTONPULSE_KEY")
+# Meramurree database
+SUPABASE_MERAMURREE_URL = os.getenv("SUPABASE_MERAMURREE_URL")
+SUPABASE_MERAMURREE_KEY = os.getenv("SUPABASE_MERAMURREE_KEY")
 
 # Table names
-HOUSTONPULSE_TABLE_NAME = "news_test"
+MERAMURREE_TABLE_NAME = "news_test"
 
-# Houston-Pulse Supabase client
-houstonpulse_supabase = create_client(
-    SUPABASE_HOUSTONPULSE_URL,
-    SUPABASE_HOUSTONPULSE_KEY,
+# Meramurree Supabase client
+meramurree_supabase = create_client(
+    SUPABASE_MERAMURREE_URL,
+    SUPABASE_MERAMURREE_KEY,
 )
 
 
@@ -50,7 +50,7 @@ class SupabaseClient:
     @staticmethod
     def insert_articles(
         article_list,
-        table_name=HOUSTONPULSE_TABLE_NAME,
+        table_name=MERAMURREE_TABLE_NAME,
     ):
 
         if not article_list:
@@ -94,13 +94,13 @@ class SupabaseClient:
         return SupabaseClient._upsert_articles(
             cleaned=cleaned,
             table_name=table_name,
-            client=houstonpulse_supabase,
+            client=meramurree_supabase,
         )
 
     @staticmethod
     def insert_articles_current_year(
         article_list,
-        table_name=HOUSTONPULSE_TABLE_NAME,
+        table_name=MERAMURREE_TABLE_NAME,
     ):
 
         if not article_list:
@@ -151,5 +151,5 @@ class SupabaseClient:
         return SupabaseClient._upsert_articles(
             cleaned=cleaned,
             table_name=table_name,
-            client=houstonpulse_supabase,
+            client=meramurree_supabase,
         )
