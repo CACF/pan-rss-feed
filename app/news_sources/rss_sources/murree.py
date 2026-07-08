@@ -506,9 +506,10 @@ class MurreeRSSPipeline:
                         item, title
                     )
 
-                    # author = MurreeRSSPipeline.resolve_author(
-                    #     item, title, MurreeRSSPipeline.SOURCE
-                    # )
+                    domain = urlparse(link).netloc.lower()
+                    if "urdupoint.com" in domain or "malaysiasun" in domain:
+                        logger.info(f"Skipping UrduPoint article: '{title}'")
+                        continue
 
                     rss_categories = [
                         c.get_text(strip=True)

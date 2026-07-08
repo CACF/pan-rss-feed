@@ -5,5 +5,4 @@ logger = logging.getLogger(__name__)
 
 PIPELINE_MAP = {
     "Murree": MurreeRSSPipeline,
-   
 }
