@@ -61,6 +61,7 @@ from app.news_sources.rss_sources.tribune_fashion import (
 from app.news_sources.rss_sources.divaonline import DivaFashionRSSPipeline
 from app.news_sources.rss_sources.hmagpak import HMagFashionPipeline
 from app.news_sources.rss_sources.wwd import WWDRSSPipeline
+from app.news_sources.rss_sources.PGAtour import PGATourRSSPipeline
 
 logger = logging.getLogger(__name__)
 
