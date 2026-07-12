@@ -8,28 +8,17 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-# Main database (Business, Sports, etc.)
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-# Fashion database
-SUPABASE_FASHION_URL = os.getenv("SUPABASE_FASHION_URL")
-SUPABASE_FASHION_KEY = os.getenv("SUPABASE_FASHION_KEY")
+# Wafaq database
+SUPABASE_WAFAQ_URL = os.getenv("SUPABASE_WAFAQ_URL")
+SUPABASE_WAFAQ_KEY = os.getenv("SUPABASE_WAFAQ_KEY")
 
 # Table names
-MAIN_TABLE_NAME = "news"
-FASHION_TABLE_NAME = "news"
+WAFAQ_TABLE_NAME = "news_test"
 
-# Main Supabase client
-supabase = create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY,
-)
-
-# Fashion Supabase client
-fashion_supabase = create_client(
-    SUPABASE_FASHION_URL,
-    SUPABASE_FASHION_KEY,
+# Wafaq Supabase client
+wafaq_supabase = create_client(
+    SUPABASE_WAFAQ_URL,
+    SUPABASE_WAFAQ_KEY,
 )
 
 
@@ -61,7 +50,7 @@ class SupabaseClient:
     @staticmethod
     def insert_articles(
         article_list,
-        table_name=MAIN_TABLE_NAME,
+        table_name=WAFAQ_TABLE_NAME,
     ):
 
         if not article_list:
@@ -89,6 +78,11 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
+                "pubDate": (
+                    a.get("articlePubDate").isoformat()
+                    if a.get("articlePubDate")
+                    else None
+                ),
                 "source": a.get("source"),
                 "genre": a.get("genre"),
                 "language": a.get("language"),
@@ -100,13 +94,13 @@ class SupabaseClient:
         return SupabaseClient._upsert_articles(
             cleaned=cleaned,
             table_name=table_name,
-            client=supabase,
+            client=wafaq_supabase,
         )
 
     @staticmethod
     def insert_articles_current_year(
         article_list,
-        table_name=FASHION_TABLE_NAME,
+        table_name=WAFAQ_TABLE_NAME,
     ):
 
         if not article_list:
@@ -141,6 +135,11 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
+                "pubDate": (
+                    a.get("articlePubDate").isoformat()
+                    if a.get("articlePubDate")
+                    else None
+                ),
                 "source": a.get("source"),
                 "genre": a.get("genre"),
                 "language": a.get("language"),
@@ -152,5 +151,5 @@ class SupabaseClient:
         return SupabaseClient._upsert_articles(
             cleaned=cleaned,
             table_name=table_name,
-            client=fashion_supabase,
+            client=wafaq_supabase,
         )
