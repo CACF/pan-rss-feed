@@ -61,7 +61,8 @@ from app.news_sources.rss_sources.tribune_fashion import (
 from app.news_sources.rss_sources.divaonline import DivaFashionRSSPipeline
 from app.news_sources.rss_sources.hmagpak import HMagFashionPipeline
 from app.news_sources.rss_sources.wwd import WWDRSSPipeline
-from app.news_sources.rss_sources.PGAtour import PGATourRSSPipeline
+from app.news_sources.rss_sources.four_four_two import FourFourTwoRSSPipeline
+from app.news_sources.rss_sources.world_soccer import WorldSoccerRSSPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -114,4 +115,6 @@ PIPELINE_MAP = {
     "divaonline": DivaFashionRSSPipeline,
     "hmagpak": HMagFashionPipeline,
     "wwd": WWDRSSPipeline,
+    "fourfourtwo" : FourFourTwoRSSPipeline,
+    "worldsoccer" : WorldSoccerRSSPipeline,
 }

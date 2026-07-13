@@ -160,7 +160,7 @@ class FoxSportsRSSPipeline:
                         if node.get("@type") == "NewsArticle":
 
                             title = node.get("headline", "")
-
+                                
                             content = FoxSportsRSSPipeline.clean_content(
                                 node.get("articleBody", "")
                             )
@@ -251,6 +251,9 @@ class FoxSportsRSSPipeline:
                         continue
 
                     title = full_article.get("title", "")
+                    if 'promo' in title.lower() or 'bonus' in title.lower():
+                        continue
+                    
                     content = full_article.get("content", "")
                     authors_str = full_article.get("authors", "FOX Sports Staff")
 
