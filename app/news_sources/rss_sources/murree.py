@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class MurreeRSSPipeline:
     """
-    Murree Pulse — Targeted News Pipeline for Murree
+    Murree — Targeted News Pipeline for Murree
     """
 
     SOURCE = "Google News"
@@ -27,36 +27,90 @@ class MurreeRSSPipeline:
             "genre": "General News",
         },
         {
-            "url": "https://news.google.com/rss/search?q=Murree+tourism+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
-            "genre": "Tourism",
+            "url": "https://news.google.com/rss/search?q=Galyat+OR+Nathia+Gali+OR+Ayubia+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+            "genre": "General News",
         },
         {
-            "url": "https://news.google.com/rss/search?q=Murree+weather+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
-            "genre": "Weather",
-        },
-        {
-            "url": "https://news.google.com/rss/search?q=Murree+traffic+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
-            "genre": "Traffic",
+            "url": "https://news.google.com/rss/search?q=Murree+OR+Patriata+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+            "genre": "General News",
         },
     ]
 
     MURREE_KEYWORDS = [
+        # Main
         "murree",
-        "patriata",
+        "murree hills",
+        "murree district",
+        "murree tehsil",
+        # Galyat
+        "galyat",
+        "galiyat",
+        "nathia gali",
+        "nathiagali",
+        "dunga gali",
+        "changla gali",
+        "khanspur",
+        "ayubia",
+        "ayubia national park",
+        # Murree Areas
         "bhurban",
-        "kashmir point",
+        "patriata",
+        "new murree",
         "upper topa",
         "lower topa",
-        "new murree",
-        "patriata",
         "ghora gali",
         "jhika gali",
+        "kuldana",
+        "kashmir point",
         "pindi point",
+        "lawrence college",
+        "mall road murree",
+        # Attractions
         "patriata chairlift",
         "patriata chair lift",
         "murree expressway",
-        "murree district",
-        "murree tehsil",
+        "murree road",
+        # Tourism
+        "snowfall",
+        "tourists",
+        "tourism",
+        "hotel",
+        "guest house",
+        "chairlift",
+        "cable car",
+        # Government
+        "murree administration",
+        "assistant commissioner murree",
+        "deputy commissioner murree",
+        "murree police",
+        "rescue 1122 murree",
+        # Common
+        "gpo chowk",
+        "kashmir road",
+        # Galyat Areas
+        "barian",
+        "barian gali",
+        "khaira gali",
+        "bagnotar",
+        "changla gali",
+        "mukshpuri",
+        "miranjani",
+        "pipeline track",
+        "mushkpuri top",
+        "miranjani top",
+        # Roads
+        "murree nathia gali road",
+        "nathia gali road",
+        # Tourism Spots
+        "green spot",
+        "lalazar park",
+        "ayubia chairlift",
+        "ayubia chair lift",
+        # Government
+        "galyat development authority",
+        "gda",
+        "tehsil murree",
+        "galyat forest",
     ]
 
     DATE_META_CANDIDATES = [
@@ -474,9 +528,7 @@ class MurreeRSSPipeline:
 
                     title = title_elem.get_text(strip=True)
                     if not MurreeRSSPipeline.is_murree_related(title):
-                        logger.info(
-                            f"Not Murree-related (title filter), skipping: '{title}'"
-                        )
+                        logger.info(f"Not Murree Keywords Related, skipping: '{title}'")
                         continue
 
                     raw_link = link_elem.get_text(strip=True)
@@ -609,7 +661,7 @@ class MurreeRSSPipeline:
                     MurreeRSSPipeline.fetch_rss_feed(
                         feed_url["url"],
                         is_google_news=True,
-                        apply_murree_filter=False,
+                        apply_murree_filter=True,
                         genre=feed_url["genre"],
                     )
                 )

@@ -13,7 +13,7 @@ SUPABASE_MERAMURREE_URL = os.getenv("SUPABASE_MERAMURREE_URL")
 SUPABASE_MERAMURREE_KEY = os.getenv("SUPABASE_MERAMURREE_KEY")
 
 # Table names
-MERAMURREE_TABLE_NAME = "news_test"
+MERAMURREE_TABLE_NAME = "news"
 
 # Meramurree Supabase client
 meramurree_supabase = create_client(
