@@ -7,7 +7,6 @@ import cloudscraper
 
 from googlenewsdecoder import new_decoderv1
 from urllib.parse import urlparse
-
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
@@ -112,6 +111,14 @@ class MurreeRSSPipeline:
         "tehsil murree",
         "galyat forest",
     ]
+    SKIP_DOMAINS = {
+        "urdupoint.com",
+        "www.urdupoint.com",
+        "malaysiasun.com",
+        "www.malaysiasun.com",
+        "fotmob.com",
+        "www.fotmob.com",
+    }
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -437,7 +444,7 @@ class MurreeRSSPipeline:
                 html = response.text
 
             soup = BeautifulSoup(html, "lxml")
-            domain = urlparse(link).netloc
+            domain = urlparse(link).netloc.lower()
 
             result["image"] = MurreeRSSPipeline.extract_image(soup)
             result["published"] = MurreeRSSPipeline.extract_published_date(soup)
@@ -521,7 +528,7 @@ class MurreeRSSPipeline:
                 try:
                     title_elem = item.find("title")
                     link_elem = item.find("link")
-                    pubdate_elem = item.find("pubDate")
+                    pubdate_elem = item.find("articlePubDate")
 
                     if not title_elem or not link_elem:
                         continue
@@ -654,6 +661,7 @@ class MurreeRSSPipeline:
     def run_pipeline(input_data=None):
         try:
             all_articles = []
+            seen_titles = set()
 
             logger.info("── Murree, Punjab, Pakistan — Google News ──")
             for feed_url in MurreeRSSPipeline.GOOGLE_NEWS_FEEDS:

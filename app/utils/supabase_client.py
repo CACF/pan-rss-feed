@@ -78,7 +78,7 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
-                "pubDate": (
+                "articlePubDate": (
                     a.get("articlePubDate").isoformat()
                     if a.get("articlePubDate")
                     else None
@@ -135,7 +135,7 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
-                "pubDate": (
+                "articlePubDate": (
                     a.get("articlePubDate").isoformat()
                     if a.get("articlePubDate")
                     else None
@@ -153,3 +153,23 @@ class SupabaseClient:
             table_name=table_name,
             client=meramurree_supabase,
         )
+    
+    @staticmethod
+    def delete_articles_older_than(
+        days=7,
+        table_name=MERAMURREE_TABLE_NAME,
+    ):
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+        response = (
+            meramurree_supabase.table(table_name)
+            .delete()
+            .lt("articlePubDate", cutoff.isoformat())
+            .execute()
+        )
+
+        logger.info(
+            f"Deleted articles older than {days} days ({cutoff.isoformat()})"
+        )
+
+        return response
