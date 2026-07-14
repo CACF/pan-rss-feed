@@ -5,6 +5,7 @@ import time
 import concurrent.futures
 from bs4 import BeautifulSoup
 import re
+import cloudscraper
 import requests
 from app.utilities import MongoDBClient, get_random_headers
 from app.utils.supabase_client import SupabaseClient
@@ -17,10 +18,21 @@ class TheRegisterRSSPipeline:
     SOURCE = "The Register"
 
     RSS_FEEDS = [
-        "https://www.theregister.com/headlines.rss",
+        "https://api.theregister.com/api/v1/article?orderBy=published&site_id=2&remapper=rss",
     ]
 
     HEADERS = {
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "application/rss+xml, application/xml, text/xml, */*;q=0.8",
+        "Referer": "https://www.google.com/",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/121.0.0.0 Safari/537.36"
+        ),
+    }
+
+    ARTICLE_HEADERS = {
         "Accept-Language": "en-US,en;q=0.9",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Referer": "https://www.google.com/",
@@ -30,6 +42,26 @@ class TheRegisterRSSPipeline:
             "Chrome/121.0.0.0 Safari/537.36"
         ),
     }
+
+    @staticmethod
+    def build_headers(base_headers):
+        """
+        Merge get_random_headers() output with our base headers, but
+        FORCE Accept/Referer from base_headers so a randomizer can't
+        break API content negotiation (e.g. forcing JSON instead of XML).
+        """
+        try:
+            merged = dict(get_random_headers(base_headers) or {})
+        except Exception as e:
+            logger.warning(f"get_random_headers failed, falling back: {e}")
+            merged = dict(base_headers)
+
+        # Force-critical headers so content negotiation stays correct
+        merged["Accept"] = base_headers["Accept"]
+        merged["Referer"] = base_headers["Referer"]
+        merged["Accept-Language"] = base_headers["Accept-Language"]
+
+        return merged
 
     @staticmethod
     def parse_date(date_str):
@@ -63,13 +95,20 @@ class TheRegisterRSSPipeline:
             return None, "Unknown"
 
         try:
-            res = requests.get(
-                link,
-                timeout=30,
-                headers=get_random_headers(TheRegisterRSSPipeline.HEADERS),
+            headers = TheRegisterRSSPipeline.build_headers(
+                TheRegisterRSSPipeline.ARTICLE_HEADERS
             )
-            res.raise_for_status()
-            soup = BeautifulSoup(res.text, "lxml")
+
+            with cloudscraper.create_scraper() as scraper:
+                res = scraper.get(
+                    link,
+                    timeout=30,
+                    headers=headers,
+                )
+                res.raise_for_status()
+                html = res.text
+
+            soup = BeautifulSoup(html, "lxml")
 
             paragraphs = []
 
@@ -104,25 +143,56 @@ class TheRegisterRSSPipeline:
         try:
             logger.info(f"Fetching Register RSS feed: {feed_url}")
 
-            response = requests.get(
-                feed_url,
-                timeout=30,
-                headers=get_random_headers(TheRegisterRSSPipeline.HEADERS),
+            headers = TheRegisterRSSPipeline.build_headers(
+                TheRegisterRSSPipeline.HEADERS
             )
-            response.raise_for_status()
 
-            soup = BeautifulSoup(response.content, "lxml-xml")
+            with cloudscraper.create_scraper() as scraper:
+                response = scraper.get(
+                    feed_url,
+                    timeout=30,
+                    headers=headers,
+                )
+                response.raise_for_status()
+                payload = response.content
+
+            # --- DEBUG LOGGING (remove once confirmed working) ---
+            logger.info(f"Response status: {response.status_code}")
+            logger.info(f"Response Content-Type: {response.headers.get('Content-Type')}")
+            logger.info(f"Payload length: {len(payload)}")
+            logger.info(f"Payload preview: {payload[:300]!r}")
+            # --------------------------------------------------------
+
+            soup = BeautifulSoup(payload, "lxml-xml")
             items = soup.find_all("item")
+
+            if not items:
+                # Fallback: some feeds wrap items differently or the
+                # parser choked silently. Try html.parser as a fallback
+                # and log a clear warning so we know which path fired.
+                logger.warning(
+                    "No <item> tags found with lxml-xml parser. "
+                    "Retrying with html.parser fallback."
+                )
+                soup = BeautifulSoup(payload, "html.parser")
+                items = soup.find_all("item")
+                logger.info(f"Fallback parser found {len(items)} items")
 
             feed_build_date = datetime.now(timezone.utc)
             articles = []
 
             for item in items:
                 try:
-                    title = item.find("title").get_text(strip=True)
-                    link = item.find("link").get_text(strip=True)
+                    title_elem = item.find("title")
+                    link_elem = item.find("link")
 
-                    pub_date = item.find("pubDate")
+                    if not title_elem or not link_elem:
+                        continue
+
+                    title = title_elem.get_text(strip=True)
+                    link = link_elem.get_text(strip=True)
+
+                    pub_date = item.find("pubdate") or item.find("pubDate")
                     article_pub_date = (
                         TheRegisterRSSPipeline.parse_date(pub_date.get_text())
                         if pub_date
@@ -182,7 +252,7 @@ class TheRegisterRSSPipeline:
 
         logger.info(f"Total articles processed: {len(all_articles)}")
         return all_articles
-    
+
     @staticmethod
     def run_pipeline(input_data=None):
         try:

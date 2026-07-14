@@ -88,6 +88,7 @@ class SupabaseClient:
                 "authors": a.get("authors"),
                 "tags": a.get("tags"),
                 "image": a.get("image"),
+                "articlePubDate": a["articlePubDate"].isoformat() if a.get("articlePubDate") else None,
                 "created_at": batch_time,
                 "source": a.get("source"),
                 "genre": a.get("genre"),
@@ -102,6 +103,34 @@ class SupabaseClient:
             table_name=table_name,
             client=supabase,
         )
+    
+    @staticmethod
+    def delete_old_articles(table_name=MAIN_TABLE_NAME, client=None, days=7):
+        """
+        Delete articles older than `days` days based on articlePubDate.
+        Call this on a schedule (cron / Flask scheduler) to keep only
+        the last `days` days of news in the table.
+        """
+        client = client or supabase
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+        try:
+            response = (
+                client.table(table_name)
+                .delete()
+                .lt("articlePubDate", cutoff)
+                .execute()
+            )
+            deleted_count = len(response.data) if response.data else 0
+            logger.info(
+                f"Deleted {deleted_count} articles older than {days} days "
+                f"from '{table_name}'"
+            )
+            return {"deleted_count": deleted_count, "cutoff": cutoff}
+
+        except Exception as e:
+            logger.error(f"Failed to delete old articles from '{table_name}': {e}")
+            return {"deleted_count": 0, "error": str(e)}
 
     @staticmethod
     def insert_articles_current_year(
@@ -141,6 +170,7 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
+                "articlePubDate": a["articlePubDate"].isoformat() if a.get("articlePubDate") else None,
                 "source": a.get("source"),
                 "genre": a.get("genre"),
                 "language": a.get("language"),
