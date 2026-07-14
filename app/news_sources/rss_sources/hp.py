@@ -4,10 +4,8 @@ import logging
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import cloudscraper
-
 from googlenewsdecoder import new_decoderv1
 from urllib.parse import urlparse
-
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
@@ -23,31 +21,95 @@ class HoustonPulseRSSPipeline:
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Pakistani+community+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Pakistan+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=Pakistani+American+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Houston+Pakistani+when:7d&hl=en-US&gl=US&ceid=US:en",
-        # "https://news.google.com/rss/search?q=Houston+mosque+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistani+event+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
     ]
 
     HOUSTON_LOCAL_FEEDS = [
-        "https://chron.com/rss/feed/News-270.php",
+        # "https://chron.com/rss/feed/News-270.php",
     ]
 
     PAKISTAN_KEYWORDS = [
+        # Pakistan
         "pakistan",
         "pakistani",
+        "pakistani-american",
+        "pakistani american",
+        # Cities
         "karachi",
         "lahore",
         "islamabad",
-        "sindh",
-        "punjab",
+        "rawalpindi",
         "peshawar",
+        "quetta",
+        "multan",
+        "faisalabad",
+        "hyderabad",
+        "gilgit",
+        "skardu",
+        # Provinces
+        "punjab",
+        "sindh",
+        "balochistan",
+        "khyber pakhtunkhwa",
+        "kpk",
+        # Languages
         "urdu",
-        "south asian",
+        "punjabi",
+        "pashto",
+        "sindhi",
+        "balochi",
+        # Community
+        "pakistani community",
+        "pakistani diaspora",
+        "student association",
+        "pakistani students",
+        "student organization",
+        "international students",
+        # Religion
+        "eid",
+        "eid ul fitr",
+        "eid ul adha",
+        "ramadan",
+        "iftar",
+        "mosque",
+        "islamic center",
+        # Food
+        "biryani",
+        "nihari",
+        "haleem",
+        "karahi",
+        "chapli kebab",
+        "seekh kebab",
+        "pakistani food",
+        # Culture
+        "pakistani culture",
+        "pakistan day",
+        "independence day",
+        "14 august",
+        "basant",
+        #  # Sports
+        "cricket",
+        "pcb",
+        "psl",
+        # Business
+        "pakistani business",
+        "pakistani entrepreneur",
+        # Education
+        "pakistani students",
+        # Official
+        "pakistan consulate",
+        "consulate of pakistan",
+        # Organizations
         "pagh",
-        "hksca",
-        "pakistani-american",
-        "pakistani american",
+        "pakistan association of greater houston",
+        "pakistani american association",
+        "pakistan consulate houston",
+        "consulate general of pakistan",
+        "isgh",
+        "islamic society of greater houston",
+        "pakistani chamber",
+        "pakistan independence celebration",
     ]
 
     DATE_META_CANDIDATES = [
@@ -405,41 +467,41 @@ class HoustonPulseRSSPipeline:
             logger.warning(f"Google News decode error for {google_url}: {e}")
             return None
 
-    @staticmethod
-    def extract_genre(soup, rss_categories=None):
-        rss_categories = rss_categories or []
+    # @staticmethod
+    # def extract_genre(soup, rss_categories=None):
+    #     rss_categories = rss_categories or []
 
-        section = soup.find("meta", attrs={"property": "article:section"})
-        if section and section.get("content"):
-            return section["content"].strip()
+    #     section = soup.find("meta", attrs={"property": "article:section"})
+    #     if section and section.get("content"):
+    #         return section["content"].strip()
 
-        if rss_categories:
-            return rss_categories[0]
+    #     if rss_categories:
+    #         return rss_categories[0]
 
-        tags = HoustonPulseRSSPipeline.extract_tags_from_article(soup)
+    #     tags = HoustonPulseRSSPipeline.extract_tags_from_article(soup)
 
-        genre_map = {
-            "sports": "Sports",
-            "business": "Business",
-            "technology": "Technology",
-            "tech": "Technology",
-            "politics": "Politics",
-            "world": "World",
-            "health": "Health",
-            "entertainment": "Entertainment",
-            "lifestyle": "Lifestyle",
-            "travel": "Travel",
-            "education": "Education",
-            "crime": "Crime",
-            "opinion": "Opinion",
-        }
+    #     genre_map = {
+    #         "sports": "Sports",
+    #         "business": "Business",
+    #         "technology": "Technology",
+    #         "tech": "Technology",
+    #         "politics": "Politics",
+    #         "world": "World",
+    #         "health": "Health",
+    #         "entertainment": "Entertainment",
+    #         "lifestyle": "Lifestyle",
+    #         "travel": "Travel",
+    #         "education": "Education",
+    #         "crime": "Crime",
+    #         "opinion": "Opinion",
+    #     }
 
-        for tag in tags:
-            key = tag.lower().strip()
-            if key in genre_map:
-                return genre_map[key]
+    #     for tag in tags:
+    #         key = tag.lower().strip()
+    #         if key in genre_map:
+    #             return genre_map[key]
 
-        return "News"
+    #     return "News"
 
     @staticmethod
     def full_description(link):
@@ -471,7 +533,7 @@ class HoustonPulseRSSPipeline:
             result["published"] = HoustonPulseRSSPipeline.extract_published_date(soup)
             result["tags"] = HoustonPulseRSSPipeline.extract_tags_from_article(soup)
             result["author"] = HoustonPulseRSSPipeline.extract_author(soup)
-            result["genre"] = HoustonPulseRSSPipeline.extract_genre(soup)
+            # result["genre"] = HoustonPulseRSSPipeline.extract_genre(soup)
 
             selectors = [
                 "article",
@@ -546,7 +608,7 @@ class HoustonPulseRSSPipeline:
                 try:
                     title_elem = item.find("title")
                     link_elem = item.find("link")
-                    pubdate_elem = item.find("pubDate")
+                    pubdate_elem = item.find("articlePubDate")
 
                     if not title_elem or not link_elem:
                         continue
@@ -582,9 +644,9 @@ class HoustonPulseRSSPipeline:
                     author = full["author"] or HoustonPulseRSSPipeline.resolve_author(
                         item, title
                     )
-                    genre = full["genre"] or HoustonPulseRSSPipeline.extract_genre(
-                        BeautifulSoup(payload, "lxml-xml")
-                    )
+                    # genre = full["genre"] or HoustonPulseRSSPipeline.extract_genre(
+                    #     BeautifulSoup(payload, "lxml-xml")
+                    # )
 
                     rss_categories = [
                         c.get_text(strip=True)
@@ -608,7 +670,7 @@ class HoustonPulseRSSPipeline:
                             continue
 
                     logger.info(f"Full fetch for '{title}' — {link}")
-                    full = HoustonPulseRSSPipeline.full_description(link)
+                    # full = HoustonPulseRSSPipeline.full_description(link)
 
                     if full["content"] and len(full["content"]) > len(content):
                         content = full["content"]
@@ -649,7 +711,7 @@ class HoustonPulseRSSPipeline:
                             "image": image_url,
                             "source": source,
                             "content": content,
-                            "genre": genre,
+                            "genre": "General News",
                             "media_origin": "international",
                             "tags": categories,
                         }
@@ -682,7 +744,7 @@ class HoustonPulseRSSPipeline:
             for feed_url in HoustonPulseRSSPipeline.GOOGLE_NEWS_FEEDS:
                 all_articles.extend(
                     HoustonPulseRSSPipeline.fetch_rss_feed(
-                        feed_url, is_google_news=True, apply_pakistan_filter=False
+                        feed_url, is_google_news=True, apply_pakistan_filter=True
                     )
                 )
 
