@@ -38,13 +38,31 @@ class IslamabadRSSPipeline:
         "ict",
         "cda",
         "capital development authority",
-
         # Sectors
-        "f-5","f-6","f-7","f-8","f-9","f-10","f-11",
-        "g-5","g-6","g-7","g-8","g-9","g-10","g-11","g-13",
-        "i-8","i-9","i-10","i-11",
-        "d-12","e-11","e-7","e-8","e-9",
-
+        "f-5",
+        "f-6",
+        "f-7",
+        "f-8",
+        "f-9",
+        "f-10",
+        "f-11",
+        "g-5",
+        "g-6",
+        "g-7",
+        "g-8",
+        "g-9",
+        "g-10",
+        "g-11",
+        "g-13",
+        "i-8",
+        "i-9",
+        "i-10",
+        "i-11",
+        "d-12",
+        "e-11",
+        "e-7",
+        "e-8",
+        "e-9",
         # Places
         "blue area",
         "red zone",
@@ -56,7 +74,6 @@ class IslamabadRSSPipeline:
         "pak secretariat",
         "serena hotel",
         "diplomatic enclave",
-
         # Tourist places
         "margalla hills",
         "pir sohawa",
@@ -66,7 +83,6 @@ class IslamabadRSSPipeline:
         "bari imam",
         "lok virsa",
         "pakistan monument",
-
         # Areas
         "nilore",
         "bhara kahu",
@@ -76,19 +92,16 @@ class IslamabadRSSPipeline:
         "rawat",
         "tarnol",
         "sangjani",
-
         # Housing
         "dha islamabad",
         "bahria town islamabad",
         "pwd",
-
         # Government
         "islamabad police",
         "islamabad capital police",
         "ict police",
         "district administration islamabad",
         "deputy commissioner islamabad",
-
         # Common names
         "twin cities",
         "rawalpindi islamabad",
@@ -534,7 +547,7 @@ class IslamabadRSSPipeline:
                 try:
                     title_elem = item.find("title")
                     link_elem = item.find("link")
-                    pubdate_elem = item.find("pubDate")
+                    pubdate_elem = item.find("articlePubDate")
 
                     if not title_elem or not link_elem:
                         continue
@@ -603,8 +616,10 @@ class IslamabadRSSPipeline:
                     image_url = full["image"]
                     pub_date = full["published"] or rss_pub_date
 
-                    genre = rss_categories[0] if rss_categories else (
-                        full["genre"] or "General News"
+                    genre = (
+                        rss_categories[0]
+                        if rss_categories
+                        else (full["genre"] or "General News")
                     )
 
                     seen = set()

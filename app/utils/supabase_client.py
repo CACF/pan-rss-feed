@@ -13,7 +13,7 @@ SUPABASE_WAFAQ_URL = os.getenv("SUPABASE_WAFAQ_URL")
 SUPABASE_WAFAQ_KEY = os.getenv("SUPABASE_WAFAQ_KEY")
 
 # Table names
-WAFAQ_TABLE_NAME = "news_test"
+WAFAQ_TABLE_NAME = "news"
 
 # Wafaq Supabase client
 wafaq_supabase = create_client(
@@ -78,7 +78,7 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
-                "pubDate": (
+                "articlePubDate": (
                     a.get("articlePubDate").isoformat()
                     if a.get("articlePubDate")
                     else None
@@ -135,7 +135,7 @@ class SupabaseClient:
                 "tags": a.get("tags"),
                 "image": a.get("image"),
                 "created_at": batch_time,
-                "pubDate": (
+                "articlePubDate": (
                     a.get("articlePubDate").isoformat()
                     if a.get("articlePubDate")
                     else None
@@ -153,3 +153,23 @@ class SupabaseClient:
             table_name=table_name,
             client=wafaq_supabase,
         )
+
+    @staticmethod
+    def delete_articles_older_than(
+        days=7,
+        table_name=WAFAQ_TABLE_NAME,
+    ):
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+        response = (
+            wafaq_supabase.table(table_name)
+            .delete()
+            .lt("articlePubDate", cutoff.isoformat())
+            .execute()
+        )
+
+        logger.info(
+            f"Deleted articles older than {days} days ({cutoff.isoformat()})"
+        )
+
+        return response
