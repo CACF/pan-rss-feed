@@ -63,11 +63,13 @@ from app.news_sources.rss_sources.hmagpak import HMagFashionPipeline
 from app.news_sources.rss_sources.wwd import WWDRSSPipeline
 from app.news_sources.rss_sources.four_four_two import FourFourTwoRSSPipeline
 from app.news_sources.rss_sources.world_soccer import WorldSoccerRSSPipeline
+from app.news_sources.scraper_sources.HockeyPaper import HockeyPaperScraper
+from app.news_sources.scraper_sources.FIHHockey import FIHHockeyScraper
+from app.news_sources.scraper_sources.CBCSports import CBCSportsScraper
 
 logger = logging.getLogger(__name__)
 
 PIPELINE_MAP = {
-    # "Reuters": ReutersRSSPipeline,
     "aaj": AajTVBusinessRSSPipeline,
     "APP NEWS": APPBusinessRSSPipeline,
     "BBC": BBCRSSPipeline,
@@ -117,4 +119,7 @@ PIPELINE_MAP = {
     "wwd": WWDRSSPipeline,
     "fourfourtwo" : FourFourTwoRSSPipeline,
     "worldsoccer" : WorldSoccerRSSPipeline,
+    "hockeyPaper" : HockeyPaperScraper,
+    "FIHhockey" : FIHHockeyScraper,
+    "cbcsports" : CBCSportsScraper,
 }
