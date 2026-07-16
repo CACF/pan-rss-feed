@@ -66,6 +66,7 @@ from app.news_sources.rss_sources.world_soccer import WorldSoccerRSSPipeline
 from app.news_sources.scraper_sources.HockeyPaper import HockeyPaperScraper
 from app.news_sources.scraper_sources.FIHHockey import FIHHockeyScraper
 from app.news_sources.scraper_sources.CBCSports import CBCSportsScraper
+from app.news_sources.scraper_sources.sportsNet import SportsnetScraper
 
 logger = logging.getLogger(__name__)
 
@@ -122,4 +123,5 @@ PIPELINE_MAP = {
     "hockeyPaper" : HockeyPaperScraper,
     "FIHhockey" : FIHHockeyScraper,
     "cbcsports" : CBCSportsScraper,
+    "sportNet" : SportsnetScraper
 }
