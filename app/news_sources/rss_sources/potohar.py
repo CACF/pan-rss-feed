@@ -13,29 +13,25 @@ from app.utils.supabase_client import SupabaseClient
 logger = logging.getLogger(__name__)
 
 
-class MurreeRSSPipeline:
+class PotoharRSSPipeline:
     """
-    Murree — Targeted News Pipeline for Murree
+    Potohar — Targeted News Pipeline
     """
 
     SOURCE = "Google News"
 
     GOOGLE_NEWS_FEEDS = [
-        {
-            "url": "https://news.google.com/rss/search?q=Murree+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
-            "genre": "General News",
-        },
-        {
-            "url": "https://news.google.com/rss/search?q=Galyat+OR+Nathia+Gali+OR+Ayubia+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
-            "genre": "General News",
-        },
-        {
-            "url": "https://news.google.com/rss/search?q=Murree+OR+Patriata+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
-            "genre": "General News",
-        },
+        "https://news.google.com/rss/search?q=Murree+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
+        "https://news.google.com/rss/search?q=Galyat+OR+Nathia+Gali+OR+Ayubia+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Galyat
+        "https://news.google.com/rss/search?q=Murree+OR+Patriata+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
+        "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Islamabad
+        "https://news.google.com/rss/search?q=Rawalpindi+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Rawalpindi
+        "https://news.google.com/rss/search?q=Attock+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Attock
+        "https://news.google.com/rss/search?q=Chakwal+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Chakwal
+        "https://news.google.com/rss/search?q=Jhelum+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Jhelum
     ]
 
-    MURREE_KEYWORDS = [
+    POTOHAR_KEYWORDS = [
         # Main
         "murree",
         "murree hills",
@@ -110,6 +106,63 @@ class MurreeRSSPipeline:
         "gda",
         "tehsil murree",
         "galyat forest",
+        # Region
+        "potohar",
+        "pothohar",
+        "potwar",
+        "pothwar",
+        # Islamabad
+        "islamabad",
+        "blue area",
+        "red zone",
+        "margalla hills",
+        "pir sohawa",
+        "faisal mosque",
+        "rawal lake",
+        "bani gala",
+        "bhara kahu",
+        "tarlai",
+        "nilore",
+        # Rawalpindi
+        "rawalpindi",
+        "saddar",
+        "raja bazaar",
+        "committee chowk",
+        "faizabad",
+        "satellite town",
+        "chaklala",
+        "adiala",
+        "bahria town",
+        "dha rawalpindi",
+        "gujar khan",
+        "kahuta",
+        "kallar syedan",
+        "taxila",
+        "wah cantt",
+        # Attock
+        "attock",
+        "hazro",
+        "hasan abdal",
+        "fateh jang",
+        "pindigheb",
+        "jand",
+        "kamra",
+        # Chakwal
+        "chakwal",
+        "talagang",
+        "kallar kahar",
+        "choa saidan shah",
+        "lawa",
+        "dhudial",
+        "katas raj",
+        # Jhelum
+        "jhelum",
+        "dina",
+        "sohawa",
+        "pind dadan khan",
+        "mangla",
+        "mangla dam",
+        "rohtas fort",
     ]
     SKIP_DOMAINS = {
         "urdupoint.com",
@@ -118,6 +171,10 @@ class MurreeRSSPipeline:
         "www.malaysiasun.com",
         "fotmob.com",
         "www.fotmob.com",
+        "mettisglobal.news",
+        "www.mettisglobal.news",
+        "app.com.pk",
+        "www.app.com.pk",
     }
 
     DATE_META_CANDIDATES = [
@@ -167,16 +224,16 @@ class MurreeRSSPipeline:
 
     @staticmethod
     def extract_published_date(soup):
-        for tag_name, attrs in MurreeRSSPipeline.DATE_META_CANDIDATES:
+        for tag_name, attrs in PotoharRSSPipeline.DATE_META_CANDIDATES:
             tag = soup.find(tag_name, attrs=attrs)
             if tag and tag.get("content"):
-                parsed = MurreeRSSPipeline.parse_date(tag["content"])
+                parsed = PotoharRSSPipeline.parse_date(tag["content"])
                 if parsed:
                     return parsed
 
         time_tag = soup.find("time")
         if time_tag and time_tag.get("datetime"):
-            parsed = MurreeRSSPipeline.parse_date(time_tag["datetime"])
+            parsed = PotoharRSSPipeline.parse_date(time_tag["datetime"])
             if parsed:
                 return parsed
 
@@ -364,15 +421,12 @@ class MurreeRSSPipeline:
 
     @staticmethod
     def resolve_author(item, title):
-        # source_elem = item.find("source")
-        # if source_elem and source_elem.get_text(strip=True):
-        #     return source_elem.get_text(strip=True)
 
         author_elem = item.find("dc:creator") or item.find("author")
         if author_elem and author_elem.get_text(strip=True):
             return author_elem.get_text(strip=True)
 
-        from_title = MurreeRSSPipeline.extract_author_from_title(title)
+        from_title = PotoharRSSPipeline.extract_author_from_title(title)
         if from_title:
             return from_title
 
@@ -384,7 +438,7 @@ class MurreeRSSPipeline:
         if source_elem and source_elem.get_text(strip=True):
             return source_elem.get_text(strip=True)
 
-        return MurreeRSSPipeline.SOURCE
+        return PotoharRSSPipeline.SOURCE
 
     @staticmethod
     def extract_author(soup):
@@ -404,9 +458,9 @@ class MurreeRSSPipeline:
         return None
 
     @staticmethod
-    def is_murree_related(text):
+    def is_potohar_related(text):
         lower = text.lower()
-        return any(kw in lower for kw in MurreeRSSPipeline.MURREE_KEYWORDS)
+        return any(kw in lower for kw in PotoharRSSPipeline.POTOHAR_KEYWORDS)
 
     @staticmethod
     def resolve_google_news_link(google_url):
@@ -432,6 +486,7 @@ class MurreeRSSPipeline:
             "published": None,
             "tags": [],
             "author": None,
+            "genre": "General News",
         }
 
         if not link:
@@ -446,10 +501,10 @@ class MurreeRSSPipeline:
             soup = BeautifulSoup(html, "lxml")
             domain = urlparse(link).netloc.lower()
 
-            result["image"] = MurreeRSSPipeline.extract_image(soup)
-            result["published"] = MurreeRSSPipeline.extract_published_date(soup)
-            result["tags"] = MurreeRSSPipeline.extract_tags_from_article(soup)
-            result["author"] = MurreeRSSPipeline.extract_author(soup)
+            result["image"] = PotoharRSSPipeline.extract_image(soup)
+            result["published"] = PotoharRSSPipeline.extract_published_date(soup)
+            result["tags"] = PotoharRSSPipeline.extract_tags_from_article(soup)
+            result["author"] = PotoharRSSPipeline.extract_author(soup)
 
             selectors = [
                 "article",
@@ -469,10 +524,10 @@ class MurreeRSSPipeline:
             for sel in selectors:
                 container = soup.select_one(sel)
                 if container:
-                    MurreeRSSPipeline.site_specific_cleanup(container, domain)
+                    PotoharRSSPipeline.site_specific_cleanup(container, domain)
                     for p in container.find_all("p"):
-                        text = MurreeRSSPipeline.clean_text(str(p))
-                        text = MurreeRSSPipeline.clean_article_text(text)
+                        text = PotoharRSSPipeline.clean_text(str(p))
+                        text = PotoharRSSPipeline.clean_article_text(text)
 
                         if len(text) < 30:
                             continue
@@ -484,8 +539,8 @@ class MurreeRSSPipeline:
 
             if not paragraphs:
                 for p in soup.find_all("p"):
-                    text = MurreeRSSPipeline.clean_text(str(p))
-                    text = MurreeRSSPipeline.clean_article_text(text)
+                    text = PotoharRSSPipeline.clean_text(str(p))
+                    text = PotoharRSSPipeline.clean_article_text(text)
 
                     if len(text) < 30:
                         continue
@@ -503,7 +558,7 @@ class MurreeRSSPipeline:
     def fetch_rss_feed(
         feed_url,
         is_google_news,
-        apply_murree_filter=False,
+        apply_potohar_filter=True,
         genre="General News",
     ):
         try:
@@ -534,14 +589,16 @@ class MurreeRSSPipeline:
                         continue
 
                     title = title_elem.get_text(strip=True)
-                    if not MurreeRSSPipeline.is_murree_related(title):
-                        logger.info(f"Not Murree Keywords Related, skipping: '{title}'")
+                    if not PotoharRSSPipeline.is_potohar_related(title):
+                        logger.info(
+                            f"Not Potohar Keywords Related, skipping: '{title}'"
+                        )
                         continue
 
                     raw_link = link_elem.get_text(strip=True)
 
                     if is_google_news:
-                        link = MurreeRSSPipeline.resolve_google_news_link(raw_link)
+                        link = PotoharRSSPipeline.resolve_google_news_link(raw_link)
                         if not link:
                             logger.info(
                                 f"Could not resolve Google News link, skipping: '{title}'"
@@ -551,17 +608,17 @@ class MurreeRSSPipeline:
                         link = raw_link
 
                     rss_pub_date = (
-                        MurreeRSSPipeline.parse_date(pubdate_elem.get_text())
+                        PotoharRSSPipeline.parse_date(pubdate_elem.get_text())
                         if pubdate_elem
                         else None
                     ) or datetime.now(timezone.utc)
 
-                    source = MurreeRSSPipeline.resolve_source(item)
+                    source = PotoharRSSPipeline.resolve_source(item)
                     logger.info(
                         f"Processing: '{title}' | source={source} | link={link}"
                     )
-                    full = MurreeRSSPipeline.full_description(link)
-                    author = full["author"] or MurreeRSSPipeline.resolve_author(
+                    full = PotoharRSSPipeline.full_description(link)
+                    author = full["author"] or PotoharRSSPipeline.resolve_author(
                         item, title
                     )
 
@@ -580,19 +637,19 @@ class MurreeRSSPipeline:
                         "description"
                     )
                     content_raw = content_elem.get_text() if content_elem else ""
-                    content = MurreeRSSPipeline.clean_text(content_raw)
+                    content = PotoharRSSPipeline.clean_text(content_raw)
 
-                    if apply_murree_filter:
-                        if not MurreeRSSPipeline.is_murree_related(
+                    if apply_potohar_filter:
+                        if not PotoharRSSPipeline.is_potohar_related(
                             title + " " + content
                         ):
                             logger.debug(
-                                f"Not Murree-related (pre-filter), skipping: '{title}'"
+                                f"Not Potohar-related (pre-filter), skipping: '{title}'"
                             )
                             continue
 
                     logger.info(f"Full fetch for '{title}' — {link}")
-                    full = MurreeRSSPipeline.full_description(link)
+                    # full = PotoharRSSPipeline.full_description(link)
 
                     if full["content"] and len(full["content"]) > len(content):
                         content = full["content"]
@@ -612,12 +669,12 @@ class MurreeRSSPipeline:
                         logger.info(f"Skipped (too short after full fetch): '{title}'")
                         continue
 
-                    if apply_murree_filter:
-                        if not MurreeRSSPipeline.is_murree_related(
+                    if apply_potohar_filter:
+                        if not PotoharRSSPipeline.is_potohar_related(
                             title + " " + content
                         ):
                             logger.debug(
-                                f"Not Murree-related (post-fetch), skipping: '{title}'"
+                                f"Not Potohar-related (post-fetch), skipping: '{title}'"
                             )
                             continue
 
@@ -664,13 +721,13 @@ class MurreeRSSPipeline:
             seen_titles = set()
 
             logger.info("── Murree, Punjab, Pakistan — Google News ──")
-            for feed_url in MurreeRSSPipeline.GOOGLE_NEWS_FEEDS:
+            for feed_url in PotoharRSSPipeline.GOOGLE_NEWS_FEEDS:
                 all_articles.extend(
-                    MurreeRSSPipeline.fetch_rss_feed(
-                        feed_url["url"],
+                    PotoharRSSPipeline.fetch_rss_feed(
+                        feed_url,
                         is_google_news=True,
-                        apply_murree_filter=True,
-                        genre=feed_url["genre"],
+                        apply_potohar_filter=True,
+                        genre="General News",
                     )
                 )
 

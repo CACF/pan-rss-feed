@@ -1,8 +1,8 @@
 import logging
-from app.news_sources.rss_sources.murree import MurreeRSSPipeline
+from app.news_sources.rss_sources.potohar import PotoharRSSPipeline
 
 logger = logging.getLogger(__name__)
 
 PIPELINE_MAP = {
-    "Murree": MurreeRSSPipeline,
+    "Potohar": PotoharRSSPipeline,
 }

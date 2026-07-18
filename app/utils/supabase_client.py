@@ -13,7 +13,7 @@ SUPABASE_MERAMURREE_URL = os.getenv("SUPABASE_MERAMURREE_URL")
 SUPABASE_MERAMURREE_KEY = os.getenv("SUPABASE_MERAMURREE_KEY")
 
 # Table names
-MERAMURREE_TABLE_NAME = "news_test"
+MERAMURREE_TABLE_NAME = "news"
 
 # Meramurree Supabase client
 meramurree_supabase = create_client(
@@ -153,7 +153,7 @@ class SupabaseClient:
             table_name=table_name,
             client=meramurree_supabase,
         )
-    
+
     @staticmethod
     def delete_articles_older_than(
         days=7,
@@ -168,8 +168,6 @@ class SupabaseClient:
             .execute()
         )
 
-        logger.info(
-            f"Deleted articles older than {days} days ({cutoff.isoformat()})"
-        )
+        logger.info(f"Deleted articles older than {days} days ({cutoff.isoformat()})")
 
         return response
