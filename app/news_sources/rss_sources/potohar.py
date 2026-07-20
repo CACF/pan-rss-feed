@@ -24,11 +24,11 @@ class PotoharRSSPipeline:
         "https://news.google.com/rss/search?q=Murree+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
         "https://news.google.com/rss/search?q=Galyat+OR+Nathia+Gali+OR+Ayubia+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Galyat
         "https://news.google.com/rss/search?q=Murree+OR+Patriata+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
-        "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Islamabad
-        "https://news.google.com/rss/search?q=Rawalpindi+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Rawalpindi
-        "https://news.google.com/rss/search?q=Attock+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Attock
-        "https://news.google.com/rss/search?q=Chakwal+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Chakwal
-        "https://news.google.com/rss/search?q=Jhelum+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Jhelum
+        # "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Islamabad
+        # "https://news.google.com/rss/search?q=Rawalpindi+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Rawalpindi
+        # "https://news.google.com/rss/search?q=Attock+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Attock
+        # "https://news.google.com/rss/search?q=Chakwal+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Chakwal
+        # "https://news.google.com/rss/search?q=Jhelum+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Jhelum
     ]
 
     POTOHAR_KEYWORDS = [
@@ -111,58 +111,58 @@ class PotoharRSSPipeline:
         "pothohar",
         "potwar",
         "pothwar",
-        # Islamabad
-        "islamabad",
-        "blue area",
-        "red zone",
-        "margalla hills",
-        "pir sohawa",
-        "faisal mosque",
-        "rawal lake",
-        "bani gala",
-        "bhara kahu",
-        "tarlai",
-        "nilore",
-        # Rawalpindi
-        "rawalpindi",
-        "saddar",
-        "raja bazaar",
-        "committee chowk",
-        "faizabad",
-        "satellite town",
-        "chaklala",
-        "adiala",
-        "bahria town",
-        "dha rawalpindi",
-        "gujar khan",
-        "kahuta",
-        "kallar syedan",
-        "taxila",
-        "wah cantt",
-        # Attock
-        "attock",
-        "hazro",
-        "hasan abdal",
-        "fateh jang",
-        "pindigheb",
-        "jand",
-        "kamra",
-        # Chakwal
-        "chakwal",
-        "talagang",
-        "kallar kahar",
-        "choa saidan shah",
-        "lawa",
-        "dhudial",
-        "katas raj",
-        # Jhelum
-        "jhelum",
-        "dina",
-        "sohawa",
-        "pind dadan khan",
-        "mangla",
-        "mangla dam",
-        "rohtas fort",
+        # # Islamabad
+        # "islamabad",
+        # "blue area",
+        # "red zone",
+        # "margalla hills",
+        # "pir sohawa",
+        # "faisal mosque",
+        # "rawal lake",
+        # "bani gala",
+        # "bhara kahu",
+        # "tarlai",
+        # "nilore",
+        # # Rawalpindi
+        # "rawalpindi",
+        # "saddar",
+        # "raja bazaar",
+        # "committee chowk",
+        # "faizabad",
+        # "satellite town",
+        # "chaklala",
+        # "adiala",
+        # "bahria town",
+        # "dha rawalpindi",
+        # "gujar khan",
+        # "kahuta",
+        # "kallar syedan",
+        # "taxila",
+        # "wah cantt",
+        # # Attock
+        # "attock",
+        # "hazro",
+        # "hasan abdal",
+        # "fateh jang",
+        # "pindigheb",
+        # "jand",
+        # "kamra",
+        # # Chakwal
+        # "chakwal",
+        # "talagang",
+        # "kallar kahar",
+        # "choa saidan shah",
+        # "lawa",
+        # "dhudial",
+        # "katas raj",
+        # # Jhelum
+        # "jhelum",
+        # "dina",
+        # "sohawa",
+        # "pind dadan khan",
+        # "mangla",
+        # "mangla dam",
+        # "rohtas fort",
     ]
     SKIP_DOMAINS = {
         "urdupoint.com",
@@ -737,11 +737,12 @@ class PotoharRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
+            SupabaseClient.delete_articles_older_than()
 
             return SupabaseClient.insert_articles_current_year(all_articles)
 
         except Exception as e:
-            logger.error(f"Murree Pulse pipeline failed: {e}")
+            logger.error(f"Murree pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
