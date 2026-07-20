@@ -106,6 +106,12 @@ class IslamabadRSSPipeline:
         "twin cities",
         "rawalpindi islamabad",
     ]
+    SKIP_DOMAINS = {
+        "malaysiasun.com",
+        "www.malaysiasun.com",
+        "app.com.pk",
+        "www.app.com.pk",
+    }
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -401,25 +407,6 @@ class IslamabadRSSPipeline:
         return None
 
     @staticmethod
-    def extract_genre(soup, rss_categories=None):
-        rss_categories = rss_categories or []
-
-        if rss_categories:
-            return rss_categories[0]
-
-        for attrs in [
-            {"property": "article:section"},
-            {"name": "section"},
-            {"name": "category"},
-            {"property": "og:section"},
-        ]:
-            tag = soup.find("meta", attrs=attrs)
-            if tag and tag.get("content"):
-                return tag["content"].strip()
-
-        return "General News"
-
-    @staticmethod
     def is_islamabad_related(text):
         lower = text.lower()
         return any(kw in lower for kw in IslamabadRSSPipeline.ISLAMABAD_KEYWORDS)
@@ -449,7 +436,6 @@ class IslamabadRSSPipeline:
             "tags": [],
             "author": None,
             "source": None,
-            "genre": None,
         }
 
         if not link:
@@ -469,7 +455,6 @@ class IslamabadRSSPipeline:
             result["tags"] = IslamabadRSSPipeline.extract_tags_from_article(soup)
             result["author"] = IslamabadRSSPipeline.extract_author(soup)
             result["source"] = IslamabadRSSPipeline.extract_source(soup)
-            result["genre"] = IslamabadRSSPipeline.extract_genre(soup)
 
             selectors = [
                 "article",
@@ -566,8 +551,8 @@ class IslamabadRSSPipeline:
                         link = raw_link
 
                     domain = urlparse(link).netloc.lower()
-                    if "urdupoint.com" in domain or "malaysiasun" in domain:
-                        logger.info(f"Skipping UrduPoint article: '{title}'")
+                    if domain in IslamabadRSSPipeline.SKIP_DOMAINS:
+                        logger.info(f"Skipping article from {domain}: '{title}'")
                         continue
 
                     rss_pub_date = (
@@ -616,12 +601,6 @@ class IslamabadRSSPipeline:
                     image_url = full["image"]
                     pub_date = full["published"] or rss_pub_date
 
-                    genre = (
-                        rss_categories[0]
-                        if rss_categories
-                        else (full["genre"] or "General News")
-                    )
-
                     seen = set()
                     categories = []
                     for tag in rss_categories + full["tags"]:
@@ -655,7 +634,7 @@ class IslamabadRSSPipeline:
                             "image": image_url,
                             "source": source,
                             "content": content,
-                            "genre": genre,
+                            "genre": "General News",
                             "media_origin": "local",
                             "tags": categories,
                         }
@@ -663,7 +642,7 @@ class IslamabadRSSPipeline:
 
                     logger.info(
                         f"Added: '{title}' | {len(content)} chars | "
-                        f"author={author} | genre={genre} | tags={len(categories)} | "
+                        f"author={author} | tags={len(categories)} | "
                         f"image={'yes' if image_url else 'no'} | "
                         f"date={'article' if full['published'] else 'rss-fallback'}"
                     )
@@ -710,6 +689,9 @@ class IslamabadRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
+
+            SupabaseClient.delete_articles_older_than()
+            logger.info("Deleted articles older than 7 days from Supabase")
 
             return SupabaseClient.insert_articles_current_year(all_articles)
 
