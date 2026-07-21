@@ -22,11 +22,16 @@ class HoustonPulseRSSPipeline:
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Pakistani+community+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=Pakistani+American+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Pakistani+event+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Houston+Pakistan+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Houston+Pakistani+when:7d&hl=en-US&gl=US&ceid=US:en",
+
     ]
 
     HOUSTON_LOCAL_FEEDS = [
-        # "https://chron.com/rss/feed/News-270.php",
+        "https://chron.com/rss/feed/News-270.php",
+        "https://abc13.com/feed",                          # ABC13 / KTRK
+        "https://chron.com/rss/feed/News-270.php",          # Houston Chronicle (Chron.com)
+        "https://www.fox26houston.com/rss/category/news",
     ]
 
     PAKISTAN_KEYWORDS = [
@@ -111,6 +116,12 @@ class HoustonPulseRSSPipeline:
         "pakistani chamber",
         "pakistan independence celebration",
     ]
+
+    SKIP_DOMAINS = {
+        "www.urdupoint.com",
+        "www.malaysiasun.com",
+        "www.fotmob.com",
+    }
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -467,42 +478,6 @@ class HoustonPulseRSSPipeline:
             logger.warning(f"Google News decode error for {google_url}: {e}")
             return None
 
-    # @staticmethod
-    # def extract_genre(soup, rss_categories=None):
-    #     rss_categories = rss_categories or []
-
-    #     section = soup.find("meta", attrs={"property": "article:section"})
-    #     if section and section.get("content"):
-    #         return section["content"].strip()
-
-    #     if rss_categories:
-    #         return rss_categories[0]
-
-    #     tags = HoustonPulseRSSPipeline.extract_tags_from_article(soup)
-
-    #     genre_map = {
-    #         "sports": "Sports",
-    #         "business": "Business",
-    #         "technology": "Technology",
-    #         "tech": "Technology",
-    #         "politics": "Politics",
-    #         "world": "World",
-    #         "health": "Health",
-    #         "entertainment": "Entertainment",
-    #         "lifestyle": "Lifestyle",
-    #         "travel": "Travel",
-    #         "education": "Education",
-    #         "crime": "Crime",
-    #         "opinion": "Opinion",
-    #     }
-
-    #     for tag in tags:
-    #         key = tag.lower().strip()
-    #         if key in genre_map:
-    #             return genre_map[key]
-
-    #     return "News"
-
     @staticmethod
     def full_description(link):
         result = {
@@ -629,8 +604,8 @@ class HoustonPulseRSSPipeline:
                         link = raw_link
 
                     domain = urlparse(link).netloc.lower()
-                    if "urdupoint.com" in domain or "malaysiasun" in domain:
-                        logger.info(f"Skipping UrduPoint article: '{title}'")
+                    if domain in HoustonPulseRSSPipeline.SKIP_DOMAINS:
+                        logger.info(f"Skipped (domain): '{title}'")
                         continue
 
                     rss_pub_date = (
@@ -744,7 +719,7 @@ class HoustonPulseRSSPipeline:
             for feed_url in HoustonPulseRSSPipeline.GOOGLE_NEWS_FEEDS:
                 all_articles.extend(
                     HoustonPulseRSSPipeline.fetch_rss_feed(
-                        feed_url, is_google_news=True, apply_pakistan_filter=True
+                        feed_url, is_google_news=True, apply_pakistan_filter=False
                     )
                 )
 
@@ -752,7 +727,7 @@ class HoustonPulseRSSPipeline:
             for feed_url in HoustonPulseRSSPipeline.HOUSTON_LOCAL_FEEDS:
                 all_articles.extend(
                     HoustonPulseRSSPipeline.fetch_rss_feed(
-                        feed_url, is_google_news=False, apply_pakistan_filter=True
+                        feed_url, is_google_news=False, apply_pakistan_filter=False
                     )
                 )
 
@@ -762,6 +737,7 @@ class HoustonPulseRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
+            SupabaseClient.delete_articles_older_than()
 
             return SupabaseClient.insert_articles_current_year(all_articles)
 

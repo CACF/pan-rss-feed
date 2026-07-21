@@ -168,8 +168,6 @@ class SupabaseClient:
             .execute()
         )
 
-        logger.info(
-            f"Deleted articles older than {days} days ({cutoff.isoformat()})"
-        )
+        logger.info(f"Deleted articles older than {days} days ({cutoff.isoformat()})")
 
         return response

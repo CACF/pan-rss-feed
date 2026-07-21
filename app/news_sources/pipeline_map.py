@@ -1,5 +1,5 @@
 import logging
-from app.news_sources.rss_sources.hp import HoustonPulseRSSPipeline
+from app.news_sources.rss_sources.houston import HoustonPulseRSSPipeline
 
 logger = logging.getLogger(__name__)
 
