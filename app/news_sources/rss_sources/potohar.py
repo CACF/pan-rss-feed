@@ -24,11 +24,11 @@ class PotoharRSSPipeline:
         "https://news.google.com/rss/search?q=Murree+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
         "https://news.google.com/rss/search?q=Galyat+OR+Nathia+Gali+OR+Ayubia+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Galyat
         "https://news.google.com/rss/search?q=Murree+OR+Patriata+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
-        # "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Islamabad
-        # "https://news.google.com/rss/search?q=Rawalpindi+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Rawalpindi
-        # "https://news.google.com/rss/search?q=Attock+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Attock
-        # "https://news.google.com/rss/search?q=Chakwal+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Chakwal
-        # "https://news.google.com/rss/search?q=Jhelum+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Jhelum
+        "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Islamabad
+        "https://news.google.com/rss/search?q=Rawalpindi+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Rawalpindi
+        "https://news.google.com/rss/search?q=Attock+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Attock
+        "https://news.google.com/rss/search?q=Chakwal+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Chakwal
+        "https://news.google.com/rss/search?q=Jhelum+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Jhelum
     ]
 
     POTOHAR_KEYWORDS = [
@@ -111,63 +111,63 @@ class PotoharRSSPipeline:
         "pothohar",
         "potwar",
         "pothwar",
-        # # Islamabad
-        # "islamabad",
-        # "blue area",
-        # "red zone",
-        # "margalla hills",
-        # "pir sohawa",
-        # "faisal mosque",
-        # "rawal lake",
-        # "bani gala",
-        # "bhara kahu",
-        # "tarlai",
-        # "nilore",
-        # # Rawalpindi
-        # "rawalpindi",
-        # "saddar",
-        # "raja bazaar",
-        # "committee chowk",
-        # "faizabad",
-        # "satellite town",
-        # "chaklala",
-        # "adiala",
-        # "bahria town",
-        # "dha rawalpindi",
-        # "gujar khan",
-        # "kahuta",
-        # "kallar syedan",
-        # "taxila",
-        # "wah cantt",
-        # # Attock
-        # "attock",
-        # "hazro",
-        # "hasan abdal",
-        # "fateh jang",
-        # "pindigheb",
-        # "jand",
-        # "kamra",
-        # # Chakwal
-        # "chakwal",
-        # "talagang",
-        # "kallar kahar",
-        # "choa saidan shah",
-        # "lawa",
-        # "dhudial",
-        # "katas raj",
-        # # Jhelum
-        # "jhelum",
-        # "dina",
-        # "sohawa",
-        # "pind dadan khan",
-        # "mangla",
-        # "mangla dam",
-        # "rohtas fort",
+        # Islamabad
+        "islamabad",
+        "blue area",
+        "red zone",
+        "margalla hills",
+        "pir sohawa",
+        "faisal mosque",
+        "rawal lake",
+        "bani gala",
+        "bhara kahu",
+        "tarlai",
+        "nilore",
+        # Rawalpindi
+        "rawalpindi",
+        "saddar",
+        "raja bazaar",
+        "committee chowk",
+        "faizabad",
+        "satellite town",
+        "chaklala",
+        "adiala",
+        "bahria town",
+        "dha rawalpindi",
+        "gujar khan",
+        "kahuta",
+        "kallar syedan",
+        "taxila",
+        "wah cantt",
+        # Attock
+        "attock",
+        "hazro",
+        "hasan abdal",
+        "fateh jang",
+        "pindigheb",
+        "jand",
+        "kamra",
+        # Chakwal
+        "chakwal",
+        "talagang",
+        "kallar kahar",
+        "choa saidan shah",
+        "lawa",
+        "dhudial",
+        "katas raj",
+        # Jhelum
+        "jhelum",
+        "dina",
+        "sohawa",
+        "pind dadan khan",
+        "mangla",
+        "mangla dam",
+        "rohtas fort",
     ]
     SKIP_DOMAINS = {
         "urdupoint.com",
         "www.urdupoint.com",
-        "malaysiasun.com",
+        # "malaysiasun.com",
         "www.malaysiasun.com",
         "fotmob.com",
         "www.fotmob.com",
@@ -257,6 +257,7 @@ class PotoharRSSPipeline:
 
         elif "urdupoint.com" in domain:
             selectors = [
+                "p.yrzypdyuqs",
                 ".news-author",
                 ".news-date",
                 ".social-icons",
@@ -623,8 +624,8 @@ class PotoharRSSPipeline:
                     )
 
                     domain = urlparse(link).netloc.lower()
-                    if "urdupoint.com" in domain or "malaysiasun" in domain:
-                        logger.info(f"Skipping UrduPoint article: '{title}'")
+                    if domain in PotoharRSSPipeline.SKIP_DOMAINS:
+                        logger.info(f"Skipping article from {domain}: '{title}'")
                         continue
 
                     rss_categories = [
