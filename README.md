@@ -1,74 +1,52 @@
-# Simple PAN-FEED-RSS With Fastapi (Python 3)
+# PAN RSS Feed Scraper
 
-## Getting Started
+A category-based, 2-level multithreaded news scraper system with global configuration and Supabase integration.
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
-
-### Prerequisites
-
-Make sure you have installed Python 3 on your device
-
-### Project structure
-```
-* pan-feed-rss-scraper/
-  |--- app/
-  |    |--- utils
-  |    |    |--- feed_urls.py
-  |    |    |--- feed_utilities.py
-  |    |--- v1
-  |    |    |--- blueprints.py
-  |    |    |--- feed_blc.py
-  |--- .env
-  |--- .gitignore
-  |--- Dockerfile
-  |--- README.md  
-  |--- requirements.txt
-  |--- run.py
-```
-
-
-A step by step series of examples that tell you how to get a development env running
-
-1. Install virtual environment
-```
-pip install virtualenv
-```
-2. Create virtual environment and activate inside your admin-api directory according the above structure
-```
-virtualenv venv
-> On windows -> venv\Scripts\activate
-> On linux -> source venv/bin/activate
-```
-3. Change directory into admin-api folder.
-```
-cd pan-feed-rss-scraper
-```
-4. Install some librares on your virtual environment with pip
-```
-pip install -r requirements.txt
-```
-5. Create .env file if not exists and set environment variables for database. i.e.
-```
-MONGO_HOST=127.0.0.1
-MONGO_PORT="27017"
-DATABASE="pan"
-COLLECTION="news"
-HOST=0.0.0.0
-PORT=1010
-ENVIRONMENT=development
-```
-5. Run the local server with this command
-```
-py run.py --reload
+## Project Structure
+```text
+pan-rss-feed/
+├── config.py                 # Single global configuration (Table names, Supabase credentials)
+├── pipeline_registry.py      # Central registry listing enabled category pipelines
+├── run_scrapers.py           # Main executable script for running all scrapers
+├── runFlask.py               # Flask application server
+├── startApp.bat              # Windows launch script
+├── pipeline_maps/            # Category scraper registries
+│   ├── business_pipeline_map.py
+│   ├── sports_pipeline_map.py
+│   ├── fashion_pipeline_map.py
+│   └── entertainment_pipeline_map.py
+├── scrapers/                 # Scraper modules organized by category
+│   ├── business/
+│   │   ├── pipeline.py       # BusinessPipeline
+│   │   └── [40 Scrapers]
+│   ├── sports/
+│   │   ├── pipeline.py       # SportsPipeline
+│   │   └── [19 Scrapers]
+│   ├── fashion/
+│   │   ├── pipeline.py       # FashionPipeline
+│   │   └── [8 Scrapers]
+│   └── entertainment/
+│       └── pipeline.py       # EntertainmentPipeline
+└── app/                      # Application blueprints & utilities
+    ├── __init__.py
+    ├── utilities.py
+    ├── blueprints/
+    └── utils/
+        └── supabase_client.py
 ```
 
-## Clone or Download
-
-You can clone or download this project
+## Running Scrapers
+To run all enabled scrapers:
+```bash
+python run_scrapers.py
 ```
-> Clone : https://github.com/CACF/pan-feed-rss-scraper.git
+
+## Testing Specific Categories or Scrapers
+- **To test specific categories**: Edit `pipeline_registry.py` to comment/uncomment category pipelines.
+- **To test individual scrapers**: Edit `pipeline_maps/<category>_pipeline_map.py` to comment/uncomment specific scrapers.
+
+## Switching Between Test and Production
+Edit table names in global `config.py` (Line 9):
+```python
+DEFAULT_TABLE_NAME = "test_news"  # Change to "news" for production
 ```
-
-## Authors
-
-* **Fawad Azher** - *
