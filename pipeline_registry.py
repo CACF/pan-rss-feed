@@ -13,6 +13,6 @@ from scrapers.entertainment.pipeline import EntertainmentPipeline
 PIPELINES = [
     # BusinessPipeline,
     SportsPipeline,
-    # FashionPipeline,
+    FashionPipeline,
     # EntertainmentPipeline,
 ]

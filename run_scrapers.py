@@ -117,14 +117,25 @@ def main():
     total_scraped_articles = sum(r["scraped"] for r in all_results)
     total_rows_inserted = sum(r["inserted"] for r in all_results)
 
+    # Compute Category-wise Inserted Rows
+    category_inserted = collections.defaultdict(int)
+    for r in all_results:
+        cat = r.get("category", "Unknown")
+        category_inserted[cat] += r.get("inserted", 0)
+
     print("\n" + "=" * 80)
     print("                               FINAL SUMMARY                            ")
     print("=" * 80)
     print(f" Total Scrapers Run   : {total_scrapers}")
     print(f" Successful Scrapers  : {successful_count}")
-    print(f" Failed Scrapers      : {failed_count}")
+    print(f" Failed Scrapers      : {failed_count}\n")
+    print(" Category-wise Rows Inserted:")
+    print(" --------------------------------")
+    for cat_name, count in category_inserted.items():
+        print(f" {cat_name:<20}: {count}")
+    print(" --------------------------------")
+    print(f" Total Rows Inserted  : {total_rows_inserted}\n")
     print(f" Total Articles Found : {total_scraped_articles}")
-    print(f" Total Rows Inserted  : {total_rows_inserted}")
     print(f" Total Execution Time : {total_execution_time} seconds")
 
     # If any scrapers failed, display detailed failure reasons in summary
