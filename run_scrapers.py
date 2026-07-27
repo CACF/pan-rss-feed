@@ -41,6 +41,31 @@ logger = logging.getLogger(__name__)
 console_lock = threading.Lock()
 
 
+def summarize_error(err_str: str) -> str:
+    """Convert raw exception strings into concise, human-readable summary failure reasons."""
+    if not err_str:
+        return "Unknown error"
+    err_lower = str(err_str).lower()
+
+    if any(k in err_lower for k in ["timeout", "timed out", "readtimeouterror"]):
+        return "Request timeout"
+    if any(k in err_lower for k in ["disconnected", "connection error", "connection reset", "remotedisconnected"]):
+        return "Server connection reset"
+    if any(k in err_lower for k in ["table not found", "relation", "does not exist", "table"]):
+        return "Database table not found"
+    if any(k in err_lower for k in ["403", "forbidden", "unauthorized", "auth", "permission"]):
+        return "Authentication / Access forbidden"
+    if "no articles" in err_lower:
+        return "No articles found"
+    if any(k in err_lower for k in ["array", "malformed", "schema", "typeerror", "22p02"]):
+        return "Data schema parsing error"
+    if any(k in err_lower for k in ["multiple values for argument", "nameerror", "attributeerror"]):
+        return "Scraper code execution error"
+
+    clean_err = str(err_str).split("\n")[0].strip()
+    return clean_err[:60] + ("..." if len(clean_err) > 60 else "")
+
+
 def log_scraper_start(category: str, scraper_name: str):
     """Callback triggered when a scraper starts execution."""
     with console_lock:
@@ -117,43 +142,54 @@ def main():
     total_scraped_articles = sum(r["scraped"] for r in all_results)
     total_rows_inserted = sum(r["inserted"] for r in all_results)
 
-    # Compute Category-wise Inserted Rows
-    category_inserted = collections.defaultdict(int)
+    # Group results by Category
+    category_results = collections.defaultdict(list)
     for r in all_results:
         cat = r.get("category", "Unknown")
-        category_inserted[cat] += r.get("inserted", 0)
+        category_results[cat].append(r)
 
     print("\n" + "=" * 80)
-    print("                               FINAL SUMMARY                            ")
+    print("                           CATEGORY EXECUTION SUMMARIES                        ")
+    print("=" * 80)
+
+    for cat_name, cat_items in category_results.items():
+        cat_total_scrapers = len(cat_items)
+        cat_success = sum(1 for r in cat_items if r["status"] == "Success")
+        cat_failed = sum(1 for r in cat_items if r["status"] == "Failed")
+        cat_scraped = sum(r["scraped"] for r in cat_items)
+        cat_inserted = sum(r["inserted"] for r in cat_items)
+
+        header_str = f" {cat_name.upper()} "
+        print(f"\n{header_str:=^80}")
+        print(f" Total Scrapers Run   : {cat_total_scrapers}")
+        print(f" Successful Scrapers  : {cat_success}")
+        print(f" Failed Scrapers      : {cat_failed}")
+        print(f" Total Articles Found : {cat_scraped}")
+        print(f" Total Rows Inserted  : {cat_inserted}")
+
+        if cat_failed > 0:
+            print("\n Failed Scrapers:")
+            failed_in_cat = [r for r in cat_items if r["status"] == "Failed"]
+            for f_item in failed_in_cat:
+                scraper_title = f_item.get("scraper", "Unknown")
+                raw_err = f_item.get("error", "")
+                reason = summarize_error(raw_err)
+                print(f"  - {scraper_title:<20}: {reason}")
+
+    print("\n" + "=" * 80)
+    print("                                OVERALL SUMMARY                         ")
     print("=" * 80)
     print(f" Total Scrapers Run   : {total_scrapers}")
     print(f" Successful Scrapers  : {successful_count}")
-    print(f" Failed Scrapers      : {failed_count}\n")
-    print(" Category-wise Rows Inserted:")
-    print(" --------------------------------")
-    for cat_name, count in category_inserted.items():
-        print(f" {cat_name:<20}: {count}")
-    print(" --------------------------------")
-    print(f" Total Rows Inserted  : {total_rows_inserted}\n")
+    print(f" Failed Scrapers      : {failed_count}")
     print(f" Total Articles Found : {total_scraped_articles}")
+    print(f" Total Rows Inserted  : {total_rows_inserted}")
     print(f" Total Execution Time : {total_execution_time} seconds")
-
-    # If any scrapers failed, display detailed failure reasons in summary
-    if failed_count > 0:
-        print("-" * 80)
-        print("                        FAILED SCRAPERS & REASONS                       ")
-        print("-" * 80)
-        failed_items = [r for r in all_results if r["status"] == "Failed"]
-        for idx, item in enumerate(failed_items, start=1):
-            category = item.get("category", "Unknown")
-            scraper = item.get("scraper", "Unknown")
-            err = item.get("error", "No error details provided")
-            print(f" {idx}. [{category}] {scraper}:")
-            print(f"    Reason: {err}")
+    print("=" * 80)
 
     # Display warnings and log messages grouped by scraper module
     if log_buffer.grouped_records:
-        print("-" * 80)
+        print("\n" + "-" * 80)
         print("                  WARNINGS & LOG MESSAGES BY SCRAPER                   ")
         print("-" * 80)
         for idx, (scraper_name, messages) in enumerate(log_buffer.grouped_records.items(), start=1):

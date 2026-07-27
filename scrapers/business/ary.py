@@ -21,9 +21,16 @@ class ARYNewsBusinessRSSPipeline:
 
     @staticmethod
     def parse_date(date_str):
-        """Parse RSS pubDate to datetime (UTC normalized)."""
         if not date_str:
             return datetime.now(timezone.utc)
+
+        try:
+            dt = datetime.fromisoformat(date_str.strip())
+            if dt.tzinfo:
+                return dt.astimezone(timezone.utc)
+            return dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
 
         formats = [
             "%a, %d %b %Y %H:%M:%S %z",
@@ -114,9 +121,7 @@ class ARYNewsBusinessRSSPipeline:
                     link = link_elem.get_text(strip=True)
 
                     pub_date = (
-                        ARYNewsBusinessRSSPipeline.parse_date(
-                            pub_date_elem.get_text()
-                        )
+                        ARYNewsBusinessRSSPipeline.parse_date(pub_date_elem.get_text())
                         if pub_date_elem
                         else datetime.now(timezone.utc)
                     )
@@ -133,9 +138,7 @@ class ARYNewsBusinessRSSPipeline:
                         content = ""
 
                     if len(content) < 200:
-                        logger.info(
-                            f"Skipped article '{title}' (content < 200 chars)"
-                        )
+                        logger.info(f"Skipped article '{title}' (content < 200 chars)")
                         continue
 
                     article = {
@@ -160,14 +163,10 @@ class ARYNewsBusinessRSSPipeline:
                     articles.append(article)
 
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to process ARY News article item: {e}"
-                    )
+                    logger.warning(f"Failed to process ARY News article item: {e}")
                     continue
 
-            logger.info(
-                f"Parsed {len(articles)} ARY News business articles."
-            )
+            logger.info(f"Parsed {len(articles)} ARY News business articles.")
             return articles
 
         except Exception as e:
@@ -189,11 +188,11 @@ class ARYNewsBusinessRSSPipeline:
                 {article["id"]: article for article in all_articles}.values()
             )
 
-            logger.info(
-                f"After dedupe: {len(all_articles)} articles"
-            )
+            logger.info(f"After dedupe: {len(all_articles)} articles")
 
-            result = SupabaseClient.insert_articles(all_articles, table_name=target_table)
+            result = SupabaseClient.insert_articles(
+                all_articles, table_name=target_table
+            )
 
             return result
 

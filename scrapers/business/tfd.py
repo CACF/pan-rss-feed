@@ -160,7 +160,7 @@ class FinancialDailyBusinessPipeline:
             return None
 
     @classmethod
-    def run_pipeline(input_data=None, table_name=None):
+    def run_pipeline(cls, input_data=None, table_name=None):
         try:
             target_table = table_name or BUSINESS_TABLE
             links = cls.fetch_article_links()

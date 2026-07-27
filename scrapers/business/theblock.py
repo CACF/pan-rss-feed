@@ -6,12 +6,15 @@ import time
 import concurrent.futures
 from bs4 import BeautifulSoup
 import re
+
 try:
     from curl_cffi import requests
+
     HAS_CURL_CFFI = True
 except ImportError:
     import requests
     import cloudscraper
+
     HAS_CURL_CFFI = False
 
 from app.utils.supabase_client import SupabaseClient
@@ -137,20 +140,22 @@ class TheBlockRSSPipeline:
                 if not content:
                     continue
 
-                articles.append({
-                    "id": link,
-                    "article_id": str(uuid.uuid4()),
-                    "articlePubDate": article_pub_date,
-                    "feedBuildDate": feed_build_date,
-                    "title": title,
-                    "authors": author,
-                    "language": "en-us",
-                    "source": cls.SOURCE,
-                    "content": content,
-                    "genre": "Crypto",
-                    "media_origin": "foreign",
-                    "tags": "",
-                })
+                articles.append(
+                    {
+                        "id": link,
+                        "article_id": str(uuid.uuid4()),
+                        "articlePubDate": article_pub_date,
+                        "feedBuildDate": feed_build_date,
+                        "title": title,
+                        "authors": author,
+                        "language": "en-us",
+                        "source": cls.SOURCE,
+                        "content": content,
+                        "genre": "Crypto",
+                        "media_origin": "foreign",
+                        "tags": "",
+                    }
+                )
 
             except Exception as e:
                 logger.warning(f"Item failed: {e}")
@@ -178,7 +183,7 @@ class TheBlockRSSPipeline:
         return all_articles
 
     @classmethod
-    def run_pipeline(input_data=None, table_name=None):
+    def run_pipeline(cls, input_data=None, table_name=None):
         try:
             target_table = table_name or BUSINESS_TABLE
             all_articles = []
@@ -192,9 +197,7 @@ class TheBlockRSSPipeline:
                 {article["id"]: article for article in all_articles}.values()
             )
 
-            logger.info(
-                f"After dedupe: {len(all_articles)} articles"
-            )
+            logger.info(f"After dedupe: {len(all_articles)} articles")
 
             result = SupabaseClient.insert_articles(all_articles, table_name=table_name)
 

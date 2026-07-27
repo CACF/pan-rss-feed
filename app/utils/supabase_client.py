@@ -129,25 +129,30 @@ class SupabaseClient:
             if a.get("articlePubDate") and a["articlePubDate"] >= seven_days_ago
         ]
 
-        cleaned = [
-            {
+        cleaned = []
+        for a in filtered:
+            tags_val = a.get("tags")
+            if isinstance(tags_val, (list, tuple)):
+                tags_list = [t for t in tags_val if t]
+            elif isinstance(tags_val, str) and tags_val.strip():
+                tags_list = [tags_val.strip()]
+            else:
+                tags_list = []
+
+            cleaned.append({
                 "id": a.get("id"),
                 "title": a.get("title"),
                 "content": a.get("content"),
                 "authors": a.get("authors"),
-                "tags": a.get("tags"),
+                "tags": tags_list,
                 "image": a.get("image"),
-                "articlePubDate": (
-                    a["articlePubDate"].isoformat() if a.get("articlePubDate") else None
-                ),
+                "articlePubDate": a["articlePubDate"].isoformat() if a.get("articlePubDate") else None,
                 "created_at": batch_time,
                 "source": a.get("source"),
                 "genre": a.get("genre"),
                 "language": a.get("language"),
                 "media_origin": a.get("media_origin"),
-            }
-            for a in filtered
-        ]
+            })
 
         return SupabaseClient._upsert_articles(
             cleaned=cleaned, table_name=table_name, client=target_client
@@ -218,25 +223,30 @@ class SupabaseClient:
             if a.get("articlePubDate") and a["articlePubDate"] >= start_of_year
         ]
 
-        cleaned = [
-            {
+        cleaned = []
+        for a in filtered:
+            tags_val = a.get("tags")
+            if isinstance(tags_val, (list, tuple)):
+                tags_list = [t for t in tags_val if t]
+            elif isinstance(tags_val, str) and tags_val.strip():
+                tags_list = [tags_val.strip()]
+            else:
+                tags_list = []
+
+            cleaned.append({
                 "id": a.get("id"),
                 "title": a.get("title"),
                 "content": a.get("content"),
                 "authors": a.get("authors"),
-                "tags": a.get("tags"),
+                "tags": tags_list,
                 "image": a.get("image"),
                 "created_at": batch_time,
-                "articlePubDate": (
-                    a["articlePubDate"].isoformat() if a.get("articlePubDate") else None
-                ),
+                "articlePubDate": a["articlePubDate"].isoformat() if a.get("articlePubDate") else None,
                 "source": a.get("source"),
                 "genre": a.get("genre"),
                 "language": a.get("language"),
                 "media_origin": a.get("media_origin"),
-            }
-            for a in filtered
-        ]
+            })
 
         return SupabaseClient._upsert_articles(
             cleaned=cleaned, table_name=table_name, client=target_client

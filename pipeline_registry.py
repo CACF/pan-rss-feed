@@ -11,7 +11,7 @@ from scrapers.fashion.pipeline import FashionPipeline
 from scrapers.entertainment.pipeline import EntertainmentPipeline
 
 PIPELINES = [
-    # BusinessPipeline,
+    BusinessPipeline,
     SportsPipeline,
     FashionPipeline,
     # EntertainmentPipeline,
