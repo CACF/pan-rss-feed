@@ -26,9 +26,9 @@ fashion_supabase = _init_client(
 fashionhub_supabase = _init_client(
     config.SUPABASE_FASHIONHUB_URL, config.SUPABASE_FASHIONHUB_KEY, fallback=supabase
 )
-houstanpulse_supabase = _init_client(
-    config.SUPABASE_HOUSTANPULSE_URL,
-    config.SUPABASE_HOUSTANPULSE_KEY,
+houstonpulse_supabase = _init_client(
+    config.SUPABASE_HOUSTONPULSE_URL,
+    config.SUPABASE_HOUSTONPULSE_KEY,
     fallback=supabase,
 )
 medianest_supabase = _init_client(
@@ -39,8 +39,8 @@ medianestdev_supabase = _init_client(
     config.SUPABASE_MEDIANESTDEV_KEY,
     fallback=supabase,
 )
-meramuree_supabase = _init_client(
-    config.SUPABASE_MERAMUREE_URL, config.SUPABASE_MERAMUREE_KEY, fallback=supabase
+meramurree_supabase = _init_client(
+    config.SUPABASE_MERAMURREE_URL, config.SUPABASE_MERAMURREE_KEY, fallback=supabase
 )
 merapeshawar_supabase = _init_client(
     config.SUPABASE_MERAPESHAWAR_URL,
@@ -62,16 +62,17 @@ SYSTEM_CLIENT_MAP = {
     "main": {"client": supabase, "table": config.BUSINESS_TABLE},
     "fashion": {"client": fashion_supabase, "table": config.FASHION_TABLE},
     "fashionhub": {"client": fashionhub_supabase, "table": config.FASHIONHUB_TABLE},
-    "houstanpulse": {
-        "client": houstanpulse_supabase,
-        "table": config.HOUSTANPULSE_TABLE,
+    "houstonpulse": {
+        "client": houstonpulse_supabase,
+        "table": config.HOUSTONPULSE_TABLE,
     },
     "medianest": {"client": medianest_supabase, "table": config.MEDIANEST_TABLE},
     "medianestdev": {
         "client": medianestdev_supabase,
         "table": config.MEDIANESTDEV_TABLE,
     },
-    "meramuree": {"client": meramuree_supabase, "table": config.MERAMUREE_TABLE},
+    "meramurree": {"client": meramurree_supabase, "table": config.MERAMURREE_TABLE},
+    "meramuree": {"client": meramurree_supabase, "table": config.MERAMURREE_TABLE},
     "merapeshawar": {
         "client": merapeshawar_supabase,
         "table": config.MERAPESHAWAR_TABLE,
