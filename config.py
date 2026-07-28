@@ -8,8 +8,8 @@ load_dotenv()
 # ==============================================================================
 # Comment / uncomment ONE line below to switch all tables project-wide:
 
-DEFAULT_TABLE_NAME = "news_test"  # TESTING MODE (Default)
-# DEFAULT_TABLE_NAME = "news"        # PRODUCTION MODE
+# DEFAULT_TABLE_NAME = "news_test"  # TESTING MODE
+DEFAULT_TABLE_NAME = "news"  # PRODUCTION MODE (Default)
 
 # Master Table Default (reads from .env if present, otherwise uses DEFAULT_TABLE_NAME above)
 TABLE_NAME = os.getenv("DEFAULT_TABLE_NAME", DEFAULT_TABLE_NAME)
