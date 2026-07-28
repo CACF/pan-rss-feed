@@ -10,11 +10,15 @@ from scrapers.sports.pipeline import SportsPipeline
 from scrapers.fashion.pipeline import FashionPipeline
 from scrapers.entertainment.pipeline import EntertainmentPipeline
 from scrapers.wafaq.pipeline import WafaqPipeline
+from scrapers.meramuree.pipeline import MeraMurreePipeline
+from scrapers.houstonpulse.pipeline import HoustonPulsePipeline
 
 PIPELINES = [
-    # BusinessPipeline,
-    # SportsPipeline,
-    # FashionPipeline,
-    # EntertainmentPipeline,
+    BusinessPipeline,
+    SportsPipeline,
+    FashionPipeline,
     WafaqPipeline,
+    MeraMurreePipeline,
+    HoustonPulsePipeline,
+    # EntertainmentPipeline,
 ]

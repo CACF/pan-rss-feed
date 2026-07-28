@@ -5,173 +5,178 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 import cloudscraper
-from config import WAFAQ_TABLE
+from config import MERAMURREE_TABLE
 
 from googlenewsdecoder import new_decoderv1
 from urllib.parse import urlparse
-
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
 
-class IslamabadRSSPipeline:
+class PotoharRSSPipeline:
     """
-    Targeted News Pipeline for Islamabad
+    Potohar — Targeted News Pipeline for MeraMurree
     """
 
-    SOURCE = "Rss Feeds"
-
-    MAX_WORKERS = 15
+    SOURCE = "Google News"
+    MAX_WORKERS = 30
 
     GOOGLE_NEWS_FEEDS = [
-        "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Murree+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
+        "https://news.google.com/rss/search?q=Galyat+OR+Nathia+Gali+OR+Ayubia+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Galyat
+        "https://news.google.com/rss/search?q=Murree+OR+Patriata+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Murree
+        "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Islamabad
+        "https://news.google.com/rss/search?q=Rawalpindi+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Rawalpindi
+        "https://news.google.com/rss/search?q=Attock+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Attock
+        "https://news.google.com/rss/search?q=Chakwal+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Chakwal
+        "https://news.google.com/rss/search?q=Jhelum+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Jhelum
     ]
 
-    GENERAL_NATIONAL_FEEDS = [
-        "https://tribune.com.pk/feed/homepage",
-        "https://www.dawn.com/feeds/home",
-        "https://www.thenews.com.pk/rss/1/1",
-    ]
-
-    ISLAMABAD_KEYWORDS = [
-        # General
-        "islamabad",
-        "ict",
-        "islamabad capital territory",
-        "federal capital",
-        "capital city",
-        # CDA / Government
-        "cda",
-        "capital development authority",
-        "capital development authority islamabad",
-        "pak secretariat",
-        "cabinet division",
-        "foreign office",
-        "parliament house",
-        "president house",
-        "prime minister house",
-        "constitution avenue",
-        # Police & Administration
-        "islamabad police",
-        "islamabad capital police",
-        "ict police",
-        "district administration islamabad",
-        "deputy commissioner islamabad",
-        "dc islamabad",
-        "assistant commissioner islamabad",
-        # Courts
-        "islamabad high court",
-        "ihc",
-        "supreme court",
+    POTOHAR_KEYWORDS = [
+        # Main
+        "murree",
+        "murree hills",
+        "murree district",
+        "murree tehsil",
+        # Galyat
+        "galyat",
+        "galiyat",
+        "nathia gali",
+        "nathiagali",
+        "dunga gali",
+        "changla gali",
+        "khanspur",
+        "ayubia",
+        "ayubia national park",
+        # Murree Areas
+        "bhurban",
+        "patriata",
+        "new murree",
+        "upper topa",
+        "lower topa",
+        "ghora gali",
+        "jhika gali",
+        "kuldana",
+        "kashmir point",
+        "pindi point",
+        "lawrence college",
+        "mall road murree",
+        # Attractions
+        "patriata chairlift",
+        "patriata chair lift",
+        "murree expressway",
+        "murree road",
+        # Tourism
+        "snowfall",
+        "tourists",
+        "tourism",
+        "hotel",
+        "guest house",
+        "chairlift",
+        "cable car",
+        # Government
+        "murree administration",
+        "assistant commissioner murree",
+        "deputy commissioner murree",
+        "murree police",
+        "rescue 1122 murree",
+        # Common
+        "gpo chowk",
+        "kashmir road",
+        # Galyat Areas
+        "barian",
+        "barian gali",
+        "khaira gali",
+        "bagnotar",
+        "changla gali",
+        "mukshpuri",
+        "miranjani",
+        "pipeline track",
+        "mushkpuri top",
+        "miranjani top",
         # Roads
-        "jinnah avenue",
-        "constitution avenue",
-        "srinagar highway",
-        "kashmir highway",
-        "islamabad expressway",
-        "margalla avenue",
-        # Sectors
-        "f-5",
-        "f-6",
-        "f-7",
-        "f-8",
-        "f-9",
-        "f-10",
-        "f-11",
-        "f-12",
-        "g-5",
-        "g-6",
-        "g-7",
-        "g-8",
-        "g-9",
-        "g-10",
-        "g-11",
-        "g-12",
-        "g-13",
-        "i-8",
-        "i-9",
-        "i-10",
-        "i-11",
-        "d-12",
-        "e-7",
-        "e-8",
-        "e-9",
-        "e-11",
-        "c-13",
-        # Areas
-        "bhara kahu",
-        "bara kahu",
-        "nilore",
-        "tramri",
-        "golra",
-        "tarnol",
-        "sangjani",
-        "rawat",
-        "kirpa",
-        "lehtrar",
-        "chak shahzad",
-        # Housing Societies
-        "dha islamabad",
-        "bahria town islamabad",
-        "pwd",
-        "gulberg greens",
-        "gulberg residences",
-        "naval anchorage",
-        # Famous Places
+        "murree nathia gali road",
+        "nathia gali road",
+        # Tourism Spots
+        "green spot",
+        "lalazar park",
+        "ayubia chairlift",
+        "ayubia chair lift",
+        # Government
+        "galyat development authority",
+        "gda",
+        "tehsil murree",
+        "galyat forest",
+        # Region
+        "potohar",
+        "pothohar",
+        "potwar",
+        "pothwar",
+        # Islamabad
+        "islamabad",
         "blue area",
         "red zone",
-        "centaurus",
-        "faisal mosque",
-        "pakistan monument",
-        "lok virsa",
-        "diplomatic enclave",
-        "serena hotel",
-        # Tourist Attractions
         "margalla hills",
-        "margalla hills national park",
         "pir sohawa",
-        "daman-e-koh",
-        "shakarparian",
-        "saidpur village",
-        "bari imam",
-        # Airport
-        "islamabad international airport",
-        "new islamabad airport",
-        # Hospitals
-        "pims",
-        "pakistan institute of medical sciences",
-        "polyclinic hospital",
-        "federal general hospital",
-        "shifa international hospital",
-        # Universities
-        "nust",
-        "national university of sciences and technology",
-        "comsats islamabad",
-        "international islamic university",
-        "iiui",
-        "air university",
-        "numl",
-        "quaid-i-azam university",
-        # Metro
-        "metro bus",
-        "metro station",
-        # Parks
-        "fatima jinnah park",
-        "f-9 park",
-        "lake view park",
-        "rose and jasmine garden",
-        # Religious Places
         "faisal mosque",
-        "bari imam",
-        # Common References
-        "twin cities",
+        "rawal lake",
+        "bani gala",
+        "bhara kahu",
+        "tarlai",
+        "nilore",
+        # Rawalpindi
+        "rawalpindi",
+        "saddar",
+        "raja bazaar",
+        "committee chowk",
+        "faizabad",
+        "satellite town",
+        "chaklala",
+        "adiala",
+        "bahria town",
+        "dha rawalpindi",
+        "gujar khan",
+        "kahuta",
+        "kallar syedan",
+        "taxila",
+        "wah cantt",
+        # Attock
+        "attock",
+        "hazro",
+        "hasan abdal",
+        "fateh jang",
+        "pindigheb",
+        "jand",
+        "kamra",
+        # Chakwal
+        "chakwal",
+        "talagang",
+        "kallar kahar",
+        "choa saidan shah",
+        "lawa",
+        "dhudial",
+        "katas raj",
+        # Jhelum
+        "jhelum",
+        "dina",
+        "sohawa",
+        "pind dadan khan",
+        "mangla",
+        "mangla dam",
+        "rohtas fort",
     ]
 
     SKIP_DOMAINS = {
+        "urdupoint.com",
+        "www.urdupoint.com",
         "malaysiasun.com",
         "www.malaysiasun.com",
+        "fotmob.com",
+        "www.fotmob.com",
+        "mettisglobal.news",
+        "www.mettisglobal.news",
         "app.com.pk",
         "www.app.com.pk",
         "voicepk.net",
@@ -250,33 +255,18 @@ class IslamabadRSSPipeline:
 
     @staticmethod
     def extract_published_date(soup):
-        for tag_name, attrs in IslamabadRSSPipeline.DATE_META_CANDIDATES:
+        for tag_name, attrs in PotoharRSSPipeline.DATE_META_CANDIDATES:
             tag = soup.find(tag_name, attrs=attrs)
             if tag and tag.get("content"):
-                parsed = IslamabadRSSPipeline.parse_date(tag["content"])
+                parsed = PotoharRSSPipeline.parse_date(tag["content"])
                 if parsed:
                     return parsed
 
         time_tag = soup.find("time")
         if time_tag and time_tag.get("datetime"):
-            parsed = IslamabadRSSPipeline.parse_date(time_tag["datetime"])
+            parsed = PotoharRSSPipeline.parse_date(time_tag["datetime"])
             if parsed:
                 return parsed
-
-        return None
-
-    @staticmethod
-    def extract_source(soup):
-        candidates = [
-            ("meta", {"property": "og:site_name"}),
-            ("meta", {"name": "application-name"}),
-            ("meta", {"name": "publisher"}),
-        ]
-
-        for tag_name, attrs in candidates:
-            tag = soup.find(tag_name, attrs=attrs)
-            if tag and tag.get("content"):
-                return tag["content"].strip()
 
         return None
 
@@ -298,6 +288,7 @@ class IslamabadRSSPipeline:
 
         elif "urdupoint.com" in domain:
             selectors = [
+                "p.yrzypdyuqs",
                 ".news-author",
                 ".news-date",
                 ".social-icons",
@@ -328,22 +319,23 @@ class IslamabadRSSPipeline:
                 ".advertisement",
             ]
 
-        elif "thenews.com.pk" in domain:
-            selectors = [
-                ".newsauthor",
-                ".newsdate",
-                ".relatednews",
-                ".tags",
-                ".advertisement",
-                ".sidebar",
-            ]
-
-        elif "nation.com.pk" in domain:
+        elif "dailypakistan.com.pk" in domain:
             selectors = [
                 ".author-box",
                 ".post-meta",
                 ".post-tags",
                 ".social-share",
+                ".related-posts",
+                ".advertisement",
+                ".sidebar",
+            ]
+
+        elif "pakobserver.net" in domain:
+            selectors = [
+                ".post-meta",
+                ".author-box",
+                ".post-tags",
+                ".share-buttons",
                 ".related-posts",
                 ".advertisement",
                 ".sidebar",
@@ -465,7 +457,7 @@ class IslamabadRSSPipeline:
         if author_elem and author_elem.get_text(strip=True):
             return author_elem.get_text(strip=True)
 
-        from_title = IslamabadRSSPipeline.extract_author_from_title(title)
+        from_title = PotoharRSSPipeline.extract_author_from_title(title)
         if from_title:
             return from_title
 
@@ -477,7 +469,7 @@ class IslamabadRSSPipeline:
         if source_elem and source_elem.get_text(strip=True):
             return source_elem.get_text(strip=True)
 
-        return IslamabadRSSPipeline.SOURCE
+        return PotoharRSSPipeline.SOURCE
 
     @staticmethod
     def extract_author(soup):
@@ -497,9 +489,9 @@ class IslamabadRSSPipeline:
         return None
 
     @staticmethod
-    def is_islamabad_related(text):
+    def is_potohar_related(text):
         lower = text.lower()
-        return any(kw in lower for kw in IslamabadRSSPipeline.ISLAMABAD_KEYWORDS)
+        return any(kw in lower for kw in PotoharRSSPipeline.POTOHAR_KEYWORDS)
 
     @staticmethod
     def resolve_google_news_link(google_url):
@@ -525,7 +517,7 @@ class IslamabadRSSPipeline:
             "published": None,
             "tags": [],
             "author": None,
-            "source": None,
+            "genre": "General News",
         }
 
         if not link:
@@ -538,13 +530,12 @@ class IslamabadRSSPipeline:
                 html = response.text
 
             soup = BeautifulSoup(html, "lxml")
-            domain = urlparse(link).netloc
+            domain = urlparse(link).netloc.lower()
 
-            result["image"] = IslamabadRSSPipeline.extract_image(soup)
-            result["published"] = IslamabadRSSPipeline.extract_published_date(soup)
-            result["tags"] = IslamabadRSSPipeline.extract_tags_from_article(soup)
-            result["author"] = IslamabadRSSPipeline.extract_author(soup)
-            result["source"] = IslamabadRSSPipeline.extract_source(soup)
+            result["image"] = PotoharRSSPipeline.extract_image(soup)
+            result["published"] = PotoharRSSPipeline.extract_published_date(soup)
+            result["tags"] = PotoharRSSPipeline.extract_tags_from_article(soup)
+            result["author"] = PotoharRSSPipeline.extract_author(soup)
 
             selectors = [
                 "article",
@@ -564,10 +555,10 @@ class IslamabadRSSPipeline:
             for sel in selectors:
                 container = soup.select_one(sel)
                 if container:
-                    IslamabadRSSPipeline.site_specific_cleanup(container, domain)
+                    PotoharRSSPipeline.site_specific_cleanup(container, domain)
                     for p in container.find_all("p"):
-                        text = IslamabadRSSPipeline.clean_text(str(p))
-                        text = IslamabadRSSPipeline.clean_article_text(text)
+                        text = PotoharRSSPipeline.clean_text(str(p))
+                        text = PotoharRSSPipeline.clean_article_text(text)
 
                         if len(text) < 30:
                             continue
@@ -579,8 +570,8 @@ class IslamabadRSSPipeline:
 
             if not paragraphs:
                 for p in soup.find_all("p"):
-                    text = IslamabadRSSPipeline.clean_text(str(p))
-                    text = IslamabadRSSPipeline.clean_article_text(text)
+                    text = PotoharRSSPipeline.clean_text(str(p))
+                    text = PotoharRSSPipeline.clean_article_text(text)
 
                     if len(text) < 30:
                         continue
@@ -595,14 +586,9 @@ class IslamabadRSSPipeline:
         return result
 
     @staticmethod
-    def process_item(item, is_google_news, apply_islamabad_filter, feed_build_date):
-        """
-        Process a single <item> from an RSS feed into an article dict (or None
-        if it should be skipped). This does the network-bound work (Google
-        News link resolution + full article fetch), so it's designed to be
-        safely called from a worker thread: it only touches its own local
-        variables and the immutable/read-only class data, never shared state.
-        """
+    def process_item(
+        item, is_google_news, apply_potohar_filter, genre, feed_build_date
+    ):
         try:
             title_elem = item.find("title")
             link_elem = item.find("link")
@@ -612,23 +598,16 @@ class IslamabadRSSPipeline:
                 return None
 
             title = title_elem.get_text(strip=True)
+            if not PotoharRSSPipeline.is_potohar_related(title):
+                logger.debug(f"Not Potohar Keywords Related, skipping: '{title}'")
+                return None
+
             raw_link = link_elem.get_text(strip=True)
 
-            content_elem = item.find("content:encoded") or item.find("description")
-            content_raw = content_elem.get_text() if content_elem else ""
-            content = IslamabadRSSPipeline.clean_text(content_raw)
-
-            if apply_islamabad_filter:
-                if not IslamabadRSSPipeline.is_islamabad_related(title + " " + content):
-                    logger.debug(
-                        f"Not Islamabad-related (pre-filter), skipping: '{title}'"
-                    )
-                    return None
-
             if is_google_news:
-                link = IslamabadRSSPipeline.resolve_google_news_link(raw_link)
+                link = PotoharRSSPipeline.resolve_google_news_link(raw_link)
                 if not link:
-                    logger.info(
+                    logger.debug(
                         f"Could not resolve Google News link, skipping: '{title}'"
                     )
                     return None
@@ -636,17 +615,21 @@ class IslamabadRSSPipeline:
                 link = raw_link
 
             domain = urlparse(link).netloc.lower()
-            if domain in IslamabadRSSPipeline.SKIP_DOMAINS:
-                logger.info(f"Skipping article from {domain}: '{title}'")
+            if domain in PotoharRSSPipeline.SKIP_DOMAINS:
+                logger.debug(f"Skipping article from {domain}: '{title}'")
                 return None
 
             rss_pub_date = (
-                IslamabadRSSPipeline.parse_date(pubdate_elem.get_text())
+                PotoharRSSPipeline.parse_date(pubdate_elem.get_text())
                 if pubdate_elem
                 else None
             ) or datetime.now(timezone.utc)
 
-            source = IslamabadRSSPipeline.resolve_source(item)
+            source = PotoharRSSPipeline.resolve_source(item)
+            logger.info(f"Processing: '{title}' | source={source} | link={link}")
+
+            full = PotoharRSSPipeline.full_description(link)
+            author = full["author"] or PotoharRSSPipeline.resolve_author(item, title)
 
             rss_categories = [
                 c.get_text(strip=True)
@@ -654,12 +637,9 @@ class IslamabadRSSPipeline:
                 if c.get_text(strip=True)
             ]
 
-            logger.info(f"Processing: '{title}' | source={source} | link={link}")
-
-            full = IslamabadRSSPipeline.full_description(link)
-
-            author = full["author"] or IslamabadRSSPipeline.resolve_author(item, title)
-            source = full["source"] or source
+            content_elem = item.find("content:encoded") or item.find("description")
+            content_raw = content_elem.get_text() if content_elem else ""
+            content = PotoharRSSPipeline.clean_text(content_raw)
 
             if full["content"] and len(full["content"]) > len(content):
                 content = full["content"]
@@ -676,13 +656,13 @@ class IslamabadRSSPipeline:
                     categories.append(tag)
 
             if len(content) < 200:
-                logger.info(f"Skipped (too short after full fetch): '{title}'")
+                logger.debug(f"Skipped (too short after full fetch): '{title}'")
                 return None
 
-            if apply_islamabad_filter:
-                if not IslamabadRSSPipeline.is_islamabad_related(title + " " + content):
+            if apply_potohar_filter:
+                if not PotoharRSSPipeline.is_potohar_related(title + " " + content):
                     logger.debug(
-                        f"Not Islamabad-related (post-fetch), skipping: '{title}'"
+                        f"Not Potohar-related (post-fetch), skipping: '{title}'"
                     )
                     return None
 
@@ -697,7 +677,7 @@ class IslamabadRSSPipeline:
                 "image": image_url,
                 "source": source,
                 "content": content,
-                "genre": "General News",
+                "genre": genre,
                 "media_origin": "local",
                 "tags": categories,
             }
@@ -719,7 +699,8 @@ class IslamabadRSSPipeline:
     def fetch_rss_feed(
         feed_url,
         is_google_news,
-        apply_islamabad_filter=True,
+        apply_potohar_filter=True,
+        genre="General News",
     ):
         try:
             logger.info(f"Fetching RSS: {feed_url}")
@@ -739,20 +720,16 @@ class IslamabadRSSPipeline:
             feed_build_date = datetime.now(timezone.utc)
             articles = []
 
-            # Each item requires its own network round-trip(s) (Google News
-            # decode + full article fetch), so this is I/O bound work — a
-            # thread pool gives a real speedup here without the complexity
-            # of multiprocessing, since threads release the GIL while
-            # waiting on network calls.
             with ThreadPoolExecutor(
-                max_workers=IslamabadRSSPipeline.MAX_WORKERS
+                max_workers=PotoharRSSPipeline.MAX_WORKERS
             ) as executor:
                 futures = [
                     executor.submit(
-                        IslamabadRSSPipeline.process_item,
+                        PotoharRSSPipeline.process_item,
                         item,
                         is_google_news,
-                        apply_islamabad_filter,
+                        apply_potohar_filter,
+                        genre,
                         feed_build_date,
                     )
                     for item in items
@@ -777,27 +754,18 @@ class IslamabadRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or WAFAQ_TABLE
+        target_table = table_name or MERAMURREE_TABLE
         try:
             all_articles = []
 
-            logger.info("── Islamabad, Pakistan — Google News ──")
-            for feed_url in IslamabadRSSPipeline.GOOGLE_NEWS_FEEDS:
+            logger.info("── Murree, Punjab, Pakistan — Google News ──")
+            for feed_url in PotoharRSSPipeline.GOOGLE_NEWS_FEEDS:
                 all_articles.extend(
-                    IslamabadRSSPipeline.fetch_rss_feed(
+                    PotoharRSSPipeline.fetch_rss_feed(
                         feed_url,
                         is_google_news=True,
-                        apply_islamabad_filter=True,
-                    )
-                )
-
-            logger.info("── Islamabad, Pakistan — General National Feeds ──")
-            for feed_url in IslamabadRSSPipeline.GENERAL_NATIONAL_FEEDS:
-                all_articles.extend(
-                    IslamabadRSSPipeline.fetch_rss_feed(
-                        feed_url,
-                        is_google_news=False,
-                        apply_islamabad_filter=True,
+                        apply_potohar_filter=True,
+                        genre="General News",
                     )
                 )
 
@@ -807,18 +775,14 @@ class IslamabadRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
-
             SupabaseClient.delete_old_articles(table_name=target_table)
-            logger.info(
-                f"Deleted articles older than 7 days from Supabase table '{target_table}'"
-            )
 
             return SupabaseClient.insert_system_articles(
-                "wafaq", all_articles, table_name=target_table
+                "meramurree", all_articles, table_name=target_table
             )
 
         except Exception as e:
-            logger.error(f"Islamabad Pulse pipeline failed: {e}")
+            logger.error(f"Murree pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

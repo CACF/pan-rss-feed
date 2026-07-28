@@ -5,175 +5,131 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 import cloudscraper
-from config import WAFAQ_TABLE
+from config import HOUSTONPULSE_TABLE
 
 from googlenewsdecoder import new_decoderv1
 from urllib.parse import urlparse
-
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
 
-class IslamabadRSSPipeline:
+class HoustonPulseRSSPipeline:
     """
-    Targeted News Pipeline for Islamabad
+    Houston Pulse — Targeted News Pipeline for Pakistani-American Community in Houston, Texas
     """
 
-    SOURCE = "Rss Feeds"
-
-    MAX_WORKERS = 15
+    SOURCE = "Google News"
+    MAX_WORKERS = 30
 
     GOOGLE_NEWS_FEEDS = [
-        "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Pakistani+community+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistani+American+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Houston+Pakistan+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Houston+Pakistani+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistani+cricket+USA+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistani+American+diaspora+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistan+visa+immigration+USA+when:7d&hl=en-US&gl=US&ceid=US:en",
     ]
 
-    GENERAL_NATIONAL_FEEDS = [
-        "https://tribune.com.pk/feed/homepage",
-        "https://www.dawn.com/feeds/home",
-        "https://www.thenews.com.pk/rss/1/1",
+    HOUSTON_LOCAL_FEEDS = [
+        "https://chron.com/rss/feed/News-270.php",
+        "https://abc13.com/feed",  # ABC13 / KTRK
+        "https://chron.com/rss/feed/News-270.php",  # Houston Chronicle (Chron.com)
+        "https://www.fox26houston.com/rss/category/news",
     ]
 
-    ISLAMABAD_KEYWORDS = [
-        # General
+    PAKISTAN_KEYWORDS = [
+        # Pakistan
+        "pakistan",
+        "pakistani",
+        "pakistani-american",
+        "pakistani american",
+        # Cities
+        "karachi",
+        "lahore",
         "islamabad",
-        "ict",
-        "islamabad capital territory",
-        "federal capital",
-        "capital city",
-        # CDA / Government
-        "cda",
-        "capital development authority",
-        "capital development authority islamabad",
-        "pak secretariat",
-        "cabinet division",
-        "foreign office",
-        "parliament house",
-        "president house",
-        "prime minister house",
-        "constitution avenue",
-        # Police & Administration
-        "islamabad police",
-        "islamabad capital police",
-        "ict police",
-        "district administration islamabad",
-        "deputy commissioner islamabad",
-        "dc islamabad",
-        "assistant commissioner islamabad",
-        # Courts
-        "islamabad high court",
-        "ihc",
-        "supreme court",
-        # Roads
-        "jinnah avenue",
-        "constitution avenue",
-        "srinagar highway",
-        "kashmir highway",
-        "islamabad expressway",
-        "margalla avenue",
-        # Sectors
-        "f-5",
-        "f-6",
-        "f-7",
-        "f-8",
-        "f-9",
-        "f-10",
-        "f-11",
-        "f-12",
-        "g-5",
-        "g-6",
-        "g-7",
-        "g-8",
-        "g-9",
-        "g-10",
-        "g-11",
-        "g-12",
-        "g-13",
-        "i-8",
-        "i-9",
-        "i-10",
-        "i-11",
-        "d-12",
-        "e-7",
-        "e-8",
-        "e-9",
-        "e-11",
-        "c-13",
-        # Areas
-        "bhara kahu",
-        "bara kahu",
-        "nilore",
-        "tramri",
-        "golra",
-        "tarnol",
-        "sangjani",
-        "rawat",
-        "kirpa",
-        "lehtrar",
-        "chak shahzad",
-        # Housing Societies
-        "dha islamabad",
-        "bahria town islamabad",
-        "pwd",
-        "gulberg greens",
-        "gulberg residences",
-        "naval anchorage",
-        # Famous Places
-        "blue area",
-        "red zone",
-        "centaurus",
-        "faisal mosque",
-        "pakistan monument",
-        "lok virsa",
-        "diplomatic enclave",
-        "serena hotel",
-        # Tourist Attractions
-        "margalla hills",
-        "margalla hills national park",
-        "pir sohawa",
-        "daman-e-koh",
-        "shakarparian",
-        "saidpur village",
-        "bari imam",
-        # Airport
-        "islamabad international airport",
-        "new islamabad airport",
-        # Hospitals
-        "pims",
-        "pakistan institute of medical sciences",
-        "polyclinic hospital",
-        "federal general hospital",
-        "shifa international hospital",
-        # Universities
-        "nust",
-        "national university of sciences and technology",
-        "comsats islamabad",
-        "international islamic university",
-        "iiui",
-        "air university",
-        "numl",
-        "quaid-i-azam university",
-        # Metro
-        "metro bus",
-        "metro station",
-        # Parks
-        "fatima jinnah park",
-        "f-9 park",
-        "lake view park",
-        "rose and jasmine garden",
-        # Religious Places
-        "faisal mosque",
-        "bari imam",
-        # Common References
-        "twin cities",
+        "rawalpindi",
+        "peshawar",
+        "quetta",
+        "multan",
+        "faisalabad",
+        "hyderabad",
+        "gilgit",
+        "skardu",
+        # Provinces
+        "punjab",
+        "sindh",
+        "balochistan",
+        "khyber pakhtunkhwa",
+        "kpk",
+        # Languages
+        "urdu",
+        "punjabi",
+        "pashto",
+        "sindhi",
+        "balochi",
+        # Community
+        "pakistani community",
+        "pakistani diaspora",
+        "student association",
+        "pakistani students",
+        "student organization",
+        "international students",
+        # Religion
+        "eid",
+        "eid ul fitr",
+        "eid ul adha",
+        "ramadan",
+        "iftar",
+        "mosque",
+        "islamic center",
+        # Food
+        "biryani",
+        "nihari",
+        "haleem",
+        "karahi",
+        "chapli kebab",
+        "seekh kebab",
+        "pakistani food",
+        # Culture
+        "pakistani culture",
+        "pakistan day",
+        "independence day",
+        "14 august",
+        "basant",
+        # Sports
+        "cricket",
+        "pcb",
+        "psl",
+        # Business
+        "pakistani business",
+        "pakistani entrepreneur",
+        # Education
+        "pakistani students",
+        # Official
+        "pakistan consulate",
+        "consulate of pakistan",
+        # Organizations
+        "pagh",
+        "pakistan association of greater houston",
+        "pakistani american association",
+        "pakistan consulate houston",
+        "consulate general of pakistan",
+        "isgh",
+        "islamic society of greater houston",
+        "pakistani chamber",
+        "pakistan independence celebration",
     ]
 
     SKIP_DOMAINS = {
+        "urdupoint.com",
+        "www.urdupoint.com",
         "malaysiasun.com",
         "www.malaysiasun.com",
-        "app.com.pk",
-        "www.app.com.pk",
+        "fotmob.com",
+        "www.fotmob.com",
         "voicepk.net",
         "www.voicepk.net",
         "balochistanpulse.com",
@@ -211,11 +167,7 @@ class IslamabadRSSPipeline:
         try:
             iso_str = date_str.replace(" ", "T")
             dt = datetime.fromisoformat(iso_str)
-            return (
-                dt.astimezone(timezone.utc)
-                if dt.tzinfo
-                else dt.replace(tzinfo=timezone.utc)
-            )
+            return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
         except Exception:
             pass
 
@@ -250,33 +202,18 @@ class IslamabadRSSPipeline:
 
     @staticmethod
     def extract_published_date(soup):
-        for tag_name, attrs in IslamabadRSSPipeline.DATE_META_CANDIDATES:
+        for tag_name, attrs in HoustonPulseRSSPipeline.DATE_META_CANDIDATES:
             tag = soup.find(tag_name, attrs=attrs)
             if tag and tag.get("content"):
-                parsed = IslamabadRSSPipeline.parse_date(tag["content"])
+                parsed = HoustonPulseRSSPipeline.parse_date(tag["content"])
                 if parsed:
                     return parsed
 
         time_tag = soup.find("time")
         if time_tag and time_tag.get("datetime"):
-            parsed = IslamabadRSSPipeline.parse_date(time_tag["datetime"])
+            parsed = HoustonPulseRSSPipeline.parse_date(time_tag["datetime"])
             if parsed:
                 return parsed
-
-        return None
-
-    @staticmethod
-    def extract_source(soup):
-        candidates = [
-            ("meta", {"property": "og:site_name"}),
-            ("meta", {"name": "application-name"}),
-            ("meta", {"name": "publisher"}),
-        ]
-
-        for tag_name, attrs in candidates:
-            tag = soup.find(tag_name, attrs=attrs)
-            if tag and tag.get("content"):
-                return tag["content"].strip()
 
         return None
 
@@ -284,16 +221,23 @@ class IslamabadRSSPipeline:
     def site_specific_cleanup(container, domain):
         selectors = []
 
-        if "app.com.pk" in domain:
+        if "click2houston.com" in domain or "fox44news.com" in domain:
             selectors = [
-                ".jeg_share_button",
-                ".jeg_meta_container",
-                ".jeg_post_tags",
-                ".jeg_postblock",
-                ".jeg_ad",
-                ".jeg_sidebar",
-                ".sharedaddy",
-                ".author-box",
+                ".article-meta",
+                ".byline",
+                ".timestamp",
+                ".published",
+                ".social-share",
+                ".share-tools",
+                ".newsletter",
+                ".related",
+                ".caption",
+                ".gallery-caption",
+                ".image-caption",
+                ".photo-credit",
+                ".copyright",
+                ".ad",
+                ".advertisement",
             ]
 
         elif "urdupoint.com" in domain:
@@ -305,52 +249,70 @@ class IslamabadRSSPipeline:
                 ".sidebar",
                 ".tags",
                 ".ads",
-                "i[aria-label='Published Time']",
+                "div.lduhynacpp",
             ]
 
-        elif "tribune.com.pk" in domain:
+        elif "dailyindependent.com.pk" in domain:
             selectors = [
-                ".story__meta",
-                ".story__sidebar",
-                ".story__tags",
-                ".story__related",
-                ".sidebar",
-                ".advertisement",
+                ".td-post-source-tags",
+                ".td-post-author-name",
+                ".td-post-date",
+                ".td-post-sharing",
+                ".td_block_related_posts",
+                ".td-a-rec",
             ]
 
-        elif "dawn.com" in domain:
-            selectors = [
-                ".story__meta",
-                ".story__sidebar",
-                ".story__tags",
-                ".story__related",
-                ".sidebar",
-                ".advertisement",
-            ]
-
-        elif "thenews.com.pk" in domain:
-            selectors = [
-                ".newsauthor",
-                ".newsdate",
-                ".relatednews",
-                ".tags",
-                ".advertisement",
-                ".sidebar",
-            ]
-
-        elif "nation.com.pk" in domain:
+        elif "lokmattimes.com" in domain:
             selectors = [
                 ".author-box",
                 ".post-meta",
-                ".post-tags",
                 ".social-share",
                 ".related-posts",
+                ".tags",
                 ".advertisement",
-                ".sidebar",
             ]
 
-        for selector in selectors:
-            for tag in container.select(selector):
+        elif "malaysiasun.com" in domain:
+            selectors = [
+                ".author",
+                ".article-meta",
+                ".share",
+                ".related",
+                ".sidebar",
+                ".banner-text p",
+                "div.large-4  medium-5 collapse right-section",
+            ]
+
+        elif "kut.org" in domain:
+            selectors = [
+                ".byline",
+                ".dateblock",
+                ".share-tools",
+                ".donation-banner",
+                ".newsletter",
+            ]
+
+        elif "dailytimes.com.pk" in domain:
+            selectors = [
+                ".post-meta",
+                ".entry-meta",
+                ".author-box",
+                ".author",
+                ".post-tags",
+                ".sharedaddy",
+                ".jp-relatedposts",
+                ".related-posts",
+                ".sidebar",
+                ".widget",
+                ".advertisement",
+                ".ads",
+                ".code-block",
+                ".social-share",
+                ".post-navigation",
+            ]
+
+        for sel in selectors:
+            for tag in container.select(sel):
                 tag.decompose()
 
     @staticmethod
@@ -366,7 +328,7 @@ class IslamabadRSSPipeline:
             r"Copyright\s+\d{4}.*?All rights reserved\.?",
             r"©\s*\d{4}.*?All rights reserved\.?",
             r"\(AP Photo.*?\)",
-            r"Photo by.*?(?=\n|$)",
+            r"Photo by .*?(?=\n|$)",
             r"Image courtesy.*?(?=\n|$)",
         ]
 
@@ -385,7 +347,6 @@ class IslamabadRSSPipeline:
                 tag.decompose()
             for a_tag in soup.find_all("a"):
                 a_tag.unwrap()
-
             text = soup.get_text(separator=" ")
             text = re.sub(r"http\S+|www\.\S+", "", text)
             return " ".join(text.split())
@@ -465,7 +426,7 @@ class IslamabadRSSPipeline:
         if author_elem and author_elem.get_text(strip=True):
             return author_elem.get_text(strip=True)
 
-        from_title = IslamabadRSSPipeline.extract_author_from_title(title)
+        from_title = HoustonPulseRSSPipeline.extract_author_from_title(title)
         if from_title:
             return from_title
 
@@ -477,7 +438,7 @@ class IslamabadRSSPipeline:
         if source_elem and source_elem.get_text(strip=True):
             return source_elem.get_text(strip=True)
 
-        return IslamabadRSSPipeline.SOURCE
+        return HoustonPulseRSSPipeline.SOURCE
 
     @staticmethod
     def extract_author(soup):
@@ -497,9 +458,9 @@ class IslamabadRSSPipeline:
         return None
 
     @staticmethod
-    def is_islamabad_related(text):
+    def is_pakistan_related(text):
         lower = text.lower()
-        return any(kw in lower for kw in IslamabadRSSPipeline.ISLAMABAD_KEYWORDS)
+        return any(kw in lower for kw in HoustonPulseRSSPipeline.PAKISTAN_KEYWORDS)
 
     @staticmethod
     def resolve_google_news_link(google_url):
@@ -525,7 +486,7 @@ class IslamabadRSSPipeline:
             "published": None,
             "tags": [],
             "author": None,
-            "source": None,
+            "genre": "General News",
         }
 
         if not link:
@@ -538,13 +499,15 @@ class IslamabadRSSPipeline:
                 html = response.text
 
             soup = BeautifulSoup(html, "lxml")
-            domain = urlparse(link).netloc
+            domain = urlparse(link).netloc.lower()
 
-            result["image"] = IslamabadRSSPipeline.extract_image(soup)
-            result["published"] = IslamabadRSSPipeline.extract_published_date(soup)
-            result["tags"] = IslamabadRSSPipeline.extract_tags_from_article(soup)
-            result["author"] = IslamabadRSSPipeline.extract_author(soup)
-            result["source"] = IslamabadRSSPipeline.extract_source(soup)
+            if "fotmob.com" in domain:
+                return result
+
+            result["image"] = HoustonPulseRSSPipeline.extract_image(soup)
+            result["published"] = HoustonPulseRSSPipeline.extract_published_date(soup)
+            result["tags"] = HoustonPulseRSSPipeline.extract_tags_from_article(soup)
+            result["author"] = HoustonPulseRSSPipeline.extract_author(soup)
 
             selectors = [
                 "article",
@@ -564,10 +527,11 @@ class IslamabadRSSPipeline:
             for sel in selectors:
                 container = soup.select_one(sel)
                 if container:
-                    IslamabadRSSPipeline.site_specific_cleanup(container, domain)
+                    HoustonPulseRSSPipeline.site_specific_cleanup(container, domain)
+
                     for p in container.find_all("p"):
-                        text = IslamabadRSSPipeline.clean_text(str(p))
-                        text = IslamabadRSSPipeline.clean_article_text(text)
+                        text = HoustonPulseRSSPipeline.clean_text(str(p))
+                        text = HoustonPulseRSSPipeline.clean_article_text(text)
 
                         if len(text) < 30:
                             continue
@@ -579,8 +543,8 @@ class IslamabadRSSPipeline:
 
             if not paragraphs:
                 for p in soup.find_all("p"):
-                    text = IslamabadRSSPipeline.clean_text(str(p))
-                    text = IslamabadRSSPipeline.clean_article_text(text)
+                    text = HoustonPulseRSSPipeline.clean_text(str(p))
+                    text = HoustonPulseRSSPipeline.clean_article_text(text)
 
                     if len(text) < 30:
                         continue
@@ -595,13 +559,9 @@ class IslamabadRSSPipeline:
         return result
 
     @staticmethod
-    def process_item(item, is_google_news, apply_islamabad_filter, feed_build_date):
+    def process_item(item, is_google_news, apply_pakistan_filter, feed_build_date):
         """
-        Process a single <item> from an RSS feed into an article dict (or None
-        if it should be skipped). This does the network-bound work (Google
-        News link resolution + full article fetch), so it's designed to be
-        safely called from a worker thread: it only touches its own local
-        variables and the immutable/read-only class data, never shared state.
+        Process a single <item> from an RSS feed into an article dict
         """
         try:
             title_elem = item.find("title")
@@ -616,19 +576,21 @@ class IslamabadRSSPipeline:
 
             content_elem = item.find("content:encoded") or item.find("description")
             content_raw = content_elem.get_text() if content_elem else ""
-            content = IslamabadRSSPipeline.clean_text(content_raw)
+            content = HoustonPulseRSSPipeline.clean_text(content_raw)
 
-            if apply_islamabad_filter:
-                if not IslamabadRSSPipeline.is_islamabad_related(title + " " + content):
+            if apply_pakistan_filter:
+                if not HoustonPulseRSSPipeline.is_pakistan_related(
+                    title + " " + content
+                ):
                     logger.debug(
-                        f"Not Islamabad-related (pre-filter), skipping: '{title}'"
+                        f"Not Pakistan-related (pre-filter), skipping: '{title}'"
                     )
                     return None
 
             if is_google_news:
-                link = IslamabadRSSPipeline.resolve_google_news_link(raw_link)
+                link = HoustonPulseRSSPipeline.resolve_google_news_link(raw_link)
                 if not link:
-                    logger.info(
+                    logger.debug(
                         f"Could not resolve Google News link, skipping: '{title}'"
                     )
                     return None
@@ -636,17 +598,21 @@ class IslamabadRSSPipeline:
                 link = raw_link
 
             domain = urlparse(link).netloc.lower()
-            if domain in IslamabadRSSPipeline.SKIP_DOMAINS:
-                logger.info(f"Skipping article from {domain}: '{title}'")
+            if domain in HoustonPulseRSSPipeline.SKIP_DOMAINS:
+                logger.debug(f"Skipped (domain): '{title}'")
                 return None
 
             rss_pub_date = (
-                IslamabadRSSPipeline.parse_date(pubdate_elem.get_text())
+                HoustonPulseRSSPipeline.parse_date(pubdate_elem.get_text())
                 if pubdate_elem
                 else None
             ) or datetime.now(timezone.utc)
 
-            source = IslamabadRSSPipeline.resolve_source(item)
+            source = HoustonPulseRSSPipeline.resolve_source(item)
+            full = HoustonPulseRSSPipeline.full_description(link)
+            author = full["author"] or HoustonPulseRSSPipeline.resolve_author(
+                item, title
+            )
 
             rss_categories = [
                 c.get_text(strip=True)
@@ -654,12 +620,7 @@ class IslamabadRSSPipeline:
                 if c.get_text(strip=True)
             ]
 
-            logger.info(f"Processing: '{title}' | source={source} | link={link}")
-
-            full = IslamabadRSSPipeline.full_description(link)
-
-            author = full["author"] or IslamabadRSSPipeline.resolve_author(item, title)
-            source = full["source"] or source
+            logger.info(f"Full fetch for '{title}' — {link}")
 
             if full["content"] and len(full["content"]) > len(content):
                 content = full["content"]
@@ -676,13 +637,15 @@ class IslamabadRSSPipeline:
                     categories.append(tag)
 
             if len(content) < 200:
-                logger.info(f"Skipped (too short after full fetch): '{title}'")
+                logger.debug(f"Skipped (too short after full fetch): '{title}'")
                 return None
 
-            if apply_islamabad_filter:
-                if not IslamabadRSSPipeline.is_islamabad_related(title + " " + content):
+            if apply_pakistan_filter:
+                if not HoustonPulseRSSPipeline.is_pakistan_related(
+                    title + " " + content
+                ):
                     logger.debug(
-                        f"Not Islamabad-related (post-fetch), skipping: '{title}'"
+                        f"Not Pakistan-related (post-fetch), skipping: '{title}'"
                     )
                     return None
 
@@ -698,7 +661,7 @@ class IslamabadRSSPipeline:
                 "source": source,
                 "content": content,
                 "genre": "General News",
-                "media_origin": "local",
+                "media_origin": "international",
                 "tags": categories,
             }
 
@@ -716,11 +679,7 @@ class IslamabadRSSPipeline:
             return None
 
     @staticmethod
-    def fetch_rss_feed(
-        feed_url,
-        is_google_news,
-        apply_islamabad_filter=True,
-    ):
+    def fetch_rss_feed(feed_url, is_google_news, apply_pakistan_filter):
         try:
             logger.info(f"Fetching RSS: {feed_url}")
 
@@ -739,20 +698,15 @@ class IslamabadRSSPipeline:
             feed_build_date = datetime.now(timezone.utc)
             articles = []
 
-            # Each item requires its own network round-trip(s) (Google News
-            # decode + full article fetch), so this is I/O bound work — a
-            # thread pool gives a real speedup here without the complexity
-            # of multiprocessing, since threads release the GIL while
-            # waiting on network calls.
             with ThreadPoolExecutor(
-                max_workers=IslamabadRSSPipeline.MAX_WORKERS
+                max_workers=HoustonPulseRSSPipeline.MAX_WORKERS
             ) as executor:
                 futures = [
                     executor.submit(
-                        IslamabadRSSPipeline.process_item,
+                        HoustonPulseRSSPipeline.process_item,
                         item,
                         is_google_news,
-                        apply_islamabad_filter,
+                        apply_pakistan_filter,
                         feed_build_date,
                     )
                     for item in items
@@ -777,27 +731,23 @@ class IslamabadRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or WAFAQ_TABLE
+        target_table = table_name or HOUSTONPULSE_TABLE
         try:
             all_articles = []
 
-            logger.info("── Islamabad, Pakistan — Google News ──")
-            for feed_url in IslamabadRSSPipeline.GOOGLE_NEWS_FEEDS:
+            logger.info("── Tier 1: Google News (Pakistani-American + Houston) ──")
+            for feed_url in HoustonPulseRSSPipeline.GOOGLE_NEWS_FEEDS:
                 all_articles.extend(
-                    IslamabadRSSPipeline.fetch_rss_feed(
-                        feed_url,
-                        is_google_news=True,
-                        apply_islamabad_filter=True,
+                    HoustonPulseRSSPipeline.fetch_rss_feed(
+                        feed_url, is_google_news=True, apply_pakistan_filter=True
                     )
                 )
 
-            logger.info("── Islamabad, Pakistan — General National Feeds ──")
-            for feed_url in IslamabadRSSPipeline.GENERAL_NATIONAL_FEEDS:
+            logger.info("── Tier 2: Houston local feeds (Pakistan keyword filter) ──")
+            for feed_url in HoustonPulseRSSPipeline.HOUSTON_LOCAL_FEEDS:
                 all_articles.extend(
-                    IslamabadRSSPipeline.fetch_rss_feed(
-                        feed_url,
-                        is_google_news=False,
-                        apply_islamabad_filter=True,
+                    HoustonPulseRSSPipeline.fetch_rss_feed(
+                        feed_url, is_google_news=False, apply_pakistan_filter=False
                     )
                 )
 
@@ -807,18 +757,12 @@ class IslamabadRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
-
             SupabaseClient.delete_old_articles(table_name=target_table)
-            logger.info(
-                f"Deleted articles older than 7 days from Supabase table '{target_table}'"
-            )
 
-            return SupabaseClient.insert_system_articles(
-                "wafaq", all_articles, table_name=target_table
-            )
+            return SupabaseClient.insert_system_articles("houstonpulse", all_articles, table_name=target_table)
 
         except Exception as e:
-            logger.error(f"Islamabad Pulse pipeline failed: {e}")
+            logger.error(f"Houston Pulse pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
