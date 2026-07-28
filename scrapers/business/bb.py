@@ -171,7 +171,7 @@ class BloombergRSSPipeline:
                 f"After dedupe: {len(all_articles)} articles"
             )
 
-            result = SupabaseClient.insert_articles(all_articles, table_name=table_name)
+            result = SupabaseClient.insert_articles(all_articles, table_name=target_table)
 
             return result
 
