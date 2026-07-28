@@ -2,6 +2,7 @@ import re
 import uuid
 import logging
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 import cloudscraper
 from googlenewsdecoder import new_decoderv1
@@ -18,19 +19,24 @@ class HoustonPulseRSSPipeline:
     """
 
     SOURCE = "Google News"
+    MAX_WORKERS = 30
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Pakistani+community+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=Pakistani+American+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=Houston+Pakistan+when:7d&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=Houston+Pakistani+when:7d&hl=en-US&gl=US&ceid=US:en",
-
+        "https://news.google.com/rss/search?q=Houston+Pakistani+when:7d&hl=en-US&gl=US&ceid=US:en",
+        #
+        "https://news.google.com/rss/search?q=Pakistani+cricket+USA+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistani+American+diaspora+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "https://news.google.com/rss/search?q=Pakistan+visa+immigration+USA+when:7d&hl=en-US&gl=US&ceid=US:en",
     ]
 
     HOUSTON_LOCAL_FEEDS = [
         "https://chron.com/rss/feed/News-270.php",
-        "https://abc13.com/feed",                          # ABC13 / KTRK
-        "https://chron.com/rss/feed/News-270.php",          # Houston Chronicle (Chron.com)
+        "https://abc13.com/feed",  # ABC13 / KTRK
+        "https://chron.com/rss/feed/News-270.php",  # Houston Chronicle (Chron.com)
         "https://www.fox26houston.com/rss/category/news",
     ]
 
@@ -560,6 +566,126 @@ class HoustonPulseRSSPipeline:
         return result
 
     @staticmethod
+    def process_item(item, is_google_news, apply_pakistan_filter, feed_build_date):
+        """
+        Process a single <item> from an RSS feed into an article dict
+        """
+        try:
+            title_elem = item.find("title")
+            link_elem = item.find("link")
+            pubdate_elem = item.find("articlePubDate")
+
+            if not title_elem or not link_elem:
+                return None
+
+            title = title_elem.get_text(strip=True)
+            raw_link = link_elem.get_text(strip=True)
+
+            if is_google_news:
+                link = HoustonPulseRSSPipeline.resolve_google_news_link(raw_link)
+                if not link:
+                    logger.info(
+                        f"Could not resolve Google News link, skipping: '{title}'"
+                    )
+                    return None
+            else:
+                link = raw_link
+
+            domain = urlparse(link).netloc.lower()
+            if domain in HoustonPulseRSSPipeline.SKIP_DOMAINS:
+                logger.info(f"Skipped (domain): '{title}'")
+                return None
+
+            rss_pub_date = (
+                HoustonPulseRSSPipeline.parse_date(pubdate_elem.get_text())
+                if pubdate_elem
+                else None
+            ) or datetime.now(timezone.utc)
+
+            source = HoustonPulseRSSPipeline.resolve_source(item)
+            full = HoustonPulseRSSPipeline.full_description(link)
+            author = full["author"] or HoustonPulseRSSPipeline.resolve_author(
+                item, title
+            )
+
+            rss_categories = [
+                c.get_text(strip=True)
+                for c in item.find_all("category")
+                if c.get_text(strip=True)
+            ]
+
+            content_elem = item.find("content:encoded") or item.find("description")
+            content_raw = content_elem.get_text() if content_elem else ""
+            content = HoustonPulseRSSPipeline.clean_text(content_raw)
+
+            if apply_pakistan_filter:
+                if not HoustonPulseRSSPipeline.is_pakistan_related(
+                    title + " " + content
+                ):
+                    logger.debug(
+                        f"Not Pakistan-related (pre-filter), skipping: '{title}'"
+                    )
+                    return None
+
+            logger.info(f"Full fetch for '{title}' — {link}")
+
+            if full["content"] and len(full["content"]) > len(content):
+                content = full["content"]
+
+            image_url = full["image"]
+            pub_date = full["published"] or rss_pub_date
+
+            seen = set()
+            categories = []
+            for tag in rss_categories + full["tags"]:
+                key = tag.lower()
+                if key not in seen:
+                    seen.add(key)
+                    categories.append(tag)
+
+            if len(content) < 200:
+                logger.info(f"Skipped (too short after full fetch): '{title}'")
+                return None
+
+            if apply_pakistan_filter:
+                if not HoustonPulseRSSPipeline.is_pakistan_related(
+                    title + " " + content
+                ):
+                    logger.debug(
+                        f"Not Pakistan-related (post-fetch), skipping: '{title}'"
+                    )
+                    return None
+
+            article = {
+                "id": link,
+                "article_id": str(uuid.uuid4()),
+                "articlePubDate": pub_date,
+                "feedBuildDate": feed_build_date,
+                "title": title,
+                "authors": author,
+                "language": "en-US",
+                "image": image_url,
+                "source": source,
+                "content": content,
+                "genre": "General News",
+                "media_origin": "international",
+                "tags": categories,
+            }
+
+            logger.info(
+                f"Added: '{title}' | {len(content)} chars | "
+                f"author={author} | tags={len(categories)} | "
+                f"image={'yes' if image_url else 'no'} | "
+                f"date={'article' if full['published'] else 'rss-fallback'}"
+            )
+
+            return article
+
+        except Exception as e:
+            logger.warning(f"Failed parsing item: {e}")
+            return None
+
+    @staticmethod
     def fetch_rss_feed(feed_url, is_google_news, apply_pakistan_filter):
         try:
             logger.info(f"Fetching RSS: {feed_url}")
@@ -579,129 +705,29 @@ class HoustonPulseRSSPipeline:
             feed_build_date = datetime.now(timezone.utc)
             articles = []
 
-            for item in items:
-                try:
-                    title_elem = item.find("title")
-                    link_elem = item.find("link")
-                    pubdate_elem = item.find("articlePubDate")
+            with ThreadPoolExecutor(
+                max_workers=HoustonPulseRSSPipeline.MAX_WORKERS
+            ) as executor:
+                futures = [
+                    executor.submit(
+                        HoustonPulseRSSPipeline.process_item,
+                        item,
+                        is_google_news,
+                        apply_pakistan_filter,
+                        feed_build_date,
+                    )
+                    for item in items
+                ]
 
-                    if not title_elem or not link_elem:
+                for future in as_completed(futures):
+                    try:
+                        article = future.result()
+                    except Exception as e:
+                        logger.warning(f"Worker failed on item: {e}")
                         continue
 
-                    title = title_elem.get_text(strip=True)
-                    raw_link = link_elem.get_text(strip=True)
-
-                    if is_google_news:
-                        link = HoustonPulseRSSPipeline.resolve_google_news_link(
-                            raw_link
-                        )
-                        if not link:
-                            logger.info(
-                                f"Could not resolve Google News link, skipping: '{title}'"
-                            )
-                            continue
-                    else:
-                        link = raw_link
-
-                    domain = urlparse(link).netloc.lower()
-                    if domain in HoustonPulseRSSPipeline.SKIP_DOMAINS:
-                        logger.info(f"Skipped (domain): '{title}'")
-                        continue
-
-                    rss_pub_date = (
-                        HoustonPulseRSSPipeline.parse_date(pubdate_elem.get_text())
-                        if pubdate_elem
-                        else None
-                    ) or datetime.now(timezone.utc)
-
-                    source = HoustonPulseRSSPipeline.resolve_source(item)
-                    full = HoustonPulseRSSPipeline.full_description(link)
-                    author = full["author"] or HoustonPulseRSSPipeline.resolve_author(
-                        item, title
-                    )
-                    # genre = full["genre"] or HoustonPulseRSSPipeline.extract_genre(
-                    #     BeautifulSoup(payload, "lxml-xml")
-                    # )
-
-                    rss_categories = [
-                        c.get_text(strip=True)
-                        for c in item.find_all("category")
-                        if c.get_text(strip=True)
-                    ]
-
-                    content_elem = item.find("content:encoded") or item.find(
-                        "description"
-                    )
-                    content_raw = content_elem.get_text() if content_elem else ""
-                    content = HoustonPulseRSSPipeline.clean_text(content_raw)
-
-                    if apply_pakistan_filter:
-                        if not HoustonPulseRSSPipeline.is_pakistan_related(
-                            title + " " + content
-                        ):
-                            logger.debug(
-                                f"Not Pakistan-related (pre-filter), skipping: '{title}'"
-                            )
-                            continue
-
-                    logger.info(f"Full fetch for '{title}' — {link}")
-                    # full = HoustonPulseRSSPipeline.full_description(link)
-
-                    if full["content"] and len(full["content"]) > len(content):
-                        content = full["content"]
-
-                    image_url = full["image"]
-                    pub_date = full["published"] or rss_pub_date
-
-                    seen = set()
-                    categories = []
-                    for tag in rss_categories + full["tags"]:
-                        key = tag.lower()
-                        if key not in seen:
-                            seen.add(key)
-                            categories.append(tag)
-
-                    if len(content) < 200:
-                        logger.info(f"Skipped (too short after full fetch): '{title}'")
-                        continue
-
-                    if apply_pakistan_filter:
-                        if not HoustonPulseRSSPipeline.is_pakistan_related(
-                            title + " " + content
-                        ):
-                            logger.debug(
-                                f"Not Pakistan-related (post-fetch), skipping: '{title}'"
-                            )
-                            continue
-
-                    articles.append(
-                        {
-                            "id": link,
-                            "article_id": str(uuid.uuid4()),
-                            "articlePubDate": pub_date,
-                            "feedBuildDate": feed_build_date,
-                            "title": title,
-                            "authors": author,
-                            "language": "en-US",
-                            "image": image_url,
-                            "source": source,
-                            "content": content,
-                            "genre": "General News",
-                            "media_origin": "international",
-                            "tags": categories,
-                        }
-                    )
-
-                    logger.info(
-                        f"Added: '{title}' | {len(content)} chars | "
-                        f"author={author} | tags={len(categories)} | "
-                        f"image={'yes' if image_url else 'no'} | "
-                        f"date={'article' if full['published'] else 'rss-fallback'}"
-                    )
-
-                except Exception as e:
-                    logger.warning(f"Failed parsing item: {e}")
-                    continue
+                    if article is not None:
+                        articles.append(article)
 
             logger.info(f"Parsed {len(articles)} articles from {feed_url}")
             return articles
@@ -719,7 +745,7 @@ class HoustonPulseRSSPipeline:
             for feed_url in HoustonPulseRSSPipeline.GOOGLE_NEWS_FEEDS:
                 all_articles.extend(
                     HoustonPulseRSSPipeline.fetch_rss_feed(
-                        feed_url, is_google_news=True, apply_pakistan_filter=False
+                        feed_url, is_google_news=True, apply_pakistan_filter=True
                     )
                 )
 
