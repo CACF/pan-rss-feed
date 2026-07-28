@@ -17,6 +17,7 @@ except ImportError:
 
     HAS_CURL_CFFI = False
 
+from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
@@ -115,10 +116,12 @@ class TheBlockRSSPipeline:
         logger.info(f"Fetching The Block RSS feed: {feed_url}")
 
         try:
-            res = cls.session.get(feed_url, timeout=30)
-            res.raise_for_status()
+            with cloudscraper.create_scraper() as scraper:
+                res = scraper.get(feed_url, timeout=15, headers=get_random_headers())
+                res.raise_for_status()
+                payload = res.content
         except Exception as e:
-            logger.error(f"RSS fetch failed {feed_url}: {e}")
+            logger.info(f"The Block RSS feed {feed_url} unavailable (Cloudflare 403 / network restriction): {e}")
             return []
 
         soup = BeautifulSoup(res.content, "lxml-xml")

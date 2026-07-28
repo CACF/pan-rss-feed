@@ -254,7 +254,7 @@ class SportsnetScraper:
             logger.debug(f"Fetching article: {url}")
 
             resp = requests.get(
-                url, timeout=30, headers=get_random_headers(cls.HEADERS)
+                url, timeout=8, headers=get_random_headers(cls.HEADERS)
             )
             resp.raise_for_status()
             payload = resp.content
@@ -269,7 +269,7 @@ class SportsnetScraper:
             title = title_elem.get_text(strip=True) if title_elem else ""
 
             if not title:
-                logger.warning(f"No title found for {url}")
+                logger.debug(f"No title found for {url}")
                 return None
 
             time_elem = soup.select_one(".micro_authors-time-wrapper > time")
@@ -341,7 +341,7 @@ class SportsnetScraper:
 
             # Skip articles with too little content - likely broken/paywalled/junk parse
             if len(content) < 200:
-                logger.warning(
+                logger.debug(
                     f"Content too short ({len(content)} chars) for {url}, skipping"
                 )
                 return None
@@ -369,7 +369,7 @@ class SportsnetScraper:
             return article
 
         except Exception as e:
-            logger.warning(f"Failed to fetch {url}: {e}")
+            logger.debug(f"Failed to fetch {url}: {e}")
             return None
 
     @staticmethod

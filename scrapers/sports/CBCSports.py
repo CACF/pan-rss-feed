@@ -178,7 +178,7 @@ class CBCSportsScraper:
             logger.info(f"Fetching article links from genre page: {genre_url}")
 
             resp = requests.get(
-                genre_url, timeout=30, headers=get_random_headers(cls.HEADERS)
+                genre_url, timeout=8, headers=get_random_headers(cls.HEADERS)
             )
             try:
                 resp.raise_for_status()
@@ -404,7 +404,7 @@ class CBCSportsScraper:
             return article
 
         except Exception as e:
-            logger.warning(f"Failed to fetch CBC Sports article {url}: {e}")
+            logger.debug(f"Failed to fetch CBC Sports article {url}: {e}")
             return None
 
     @classmethod

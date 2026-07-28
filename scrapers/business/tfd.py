@@ -118,7 +118,7 @@ class FinancialDailyBusinessPipeline:
     def fetch_article(cls, url):
         """Fetch and parse a single article page."""
         try:
-            response = requests.get(url, timeout=30, headers=get_random_headers())
+            response = requests.get(url, timeout=8, headers=get_random_headers())
             try:
                 response.raise_for_status()
                 payload = response.content
@@ -136,7 +136,7 @@ class FinancialDailyBusinessPipeline:
             author = author_elem.get_text(strip=True) if author_elem else "Unknown"
             content = cls.extract_description(soup)
             if len(content) < 200:
-                logger.info(f"Skipping short article ({len(content)} chars): {url}")
+                logger.debug(f"Skipping short article ({len(content)} chars): {url}")
                 return None
 
             article = {

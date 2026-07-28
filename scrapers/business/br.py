@@ -10,6 +10,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import requests
 
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
@@ -27,7 +31,6 @@ class BusinessRecorderRSSPipeline:
         chrome_options = Options()
         if headless:
             chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-software-rasterizer")
         chrome_options.add_argument("--disable-features=VizDisplayCompositor")
@@ -35,6 +38,7 @@ class BusinessRecorderRSSPipeline:
         chrome_options.add_argument("--allow-insecure-localhost")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--log-level=3")
         driver = webdriver.Chrome(service=Service(), options=chrome_options)
         return driver
 

@@ -19,7 +19,7 @@ class TheRegisterRSSPipeline:
     SOURCE = "The Register"
 
     RSS_FEEDS = [
-        "https://api.theregister.com/api/v1/article?orderBy=published&site_id=2&remapper=rss",
+        "https://www.theregister.com/headlines.rss",
     ]
 
     HEADERS = {
@@ -228,7 +228,7 @@ class TheRegisterRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch RSS feed {feed_url}: {e}")
+            logger.info(f"The Register RSS feed {feed_url} unavailable: {e}")
             return []
 
     @staticmethod

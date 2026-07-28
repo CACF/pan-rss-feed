@@ -180,7 +180,7 @@ class GeosuperScraper:
             content = cls.clean_content(raw_content)
 
             if not title or not content:
-                logger.warning(f"Skipping article with missing title/content: {url}")
+                logger.debug(f"Skipping article with missing title/content: {url}")
                 return None
 
             build_date = datetime.now(timezone.utc)
