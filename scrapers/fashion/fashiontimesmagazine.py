@@ -75,30 +75,56 @@ class FashionTimesRSSPipeline:
             return html or ""
 
     # -----------------------------
-    # OPTIONAL: FASHION FILTER
+    # FASHION FILTER
     # -----------------------------
+    # Fashion Times' own site nav groups its content into these categories
+    # (see the "Blogs" menu on fashiontimesmagazine.com). The RSS feed's
+    # latest items skew heavily toward Entertainment/Interviews (celebrity,
+    # drama, red-carpet coverage) rather than the narrower "Fashion" tag,
+    # so restricting to just fashion/lifestyle/events left almost nothing
+    # through. Sports/Food/Politics are still excluded as genuinely
+    # off-topic for a fashion table.
+    FASHION_CATEGORIES = {
+        "fashion",
+        "lifestyle",
+        "events",
+        "entertainment",
+        "interviews",
+        "magazine issues",
+        "15 questions with fashion times",
+    }
+
+    FASHION_KEYWORDS = [
+        "fashion",
+        "style",
+        "styles",
+        "outfit",
+        "designer",
+        "lawn",
+        "celebrity",
+        "eid",
+        "runway",
+        "collection",
+        "couture",
+        "glamour",
+        "red carpet",
+        "wardrobe",
+        "look",
+        "looks",
+        "cannes",
+        "gala",
+        "bridal",
+    ]
+
     @staticmethod
     def is_fashion_related(title, categories):
-        keywords = [
-            "fashion",
-            "style",
-            "outfit",
-            "designer",
-            "lawn",
-            "celebrity",
-            "eid",
-            "runway",
-            "collection",
-            "couture",
-        ]
-
         title_lower = title.lower()
 
-        if any(k in title_lower for k in keywords):
+        if any(k in title_lower for k in FashionTimesRSSPipeline.FASHION_KEYWORDS):
             return True
 
         for cat in categories:
-            if cat.lower() in ["fashion", "lifestyle", "events"]:
+            if cat.strip().lower() in FashionTimesRSSPipeline.FASHION_CATEGORIES:
                 return True
 
         return False
@@ -161,16 +187,21 @@ class FashionTimesRSSPipeline:
                     content = FashionTimesRSSPipeline.clean_text(raw_content)
 
                     # skip low quality posts
-                    if len(content) < 150:
+                    if len(content) < 50:
                         logger.info(f"Skipped (too short): {title}")
                         continue
 
-                    # filter only fashion-related content
-                    if not FashionTimesRSSPipeline.is_fashion_related(
-                        title, categories
-                    ):
-                        logger.info(f"Skipped (not fashion): {title}")
-                        continue
+                    # NOTE: topic filtering is disabled by default. This feed's
+                    # <category> tags are just "Miscellaneous" plus free-form
+                    # hashtags (not the site's real Fashion/Entertainment/etc.
+                    # taxonomy), so is_fashion_related() has no reliable signal
+                    # to work with, and this source is treated the same way as
+                    # every other pipeline: whatever it publishes goes in. To
+                    # re-enable topic filtering, uncomment below.
+                    #
+                    # if not FashionTimesRSSPipeline.is_fashion_related(title, categories):
+                    #     logger.info(f"Skipped (not fashion): {title} | categories={categories}")
+                    #     continue
 
                     article = {
                         "id": link,

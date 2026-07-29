@@ -2,6 +2,7 @@ from config import BUSINESS_TABLE
 import re
 import uuid
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import cloudscraper
@@ -18,6 +19,9 @@ class ARYNewsBusinessRSSPipeline:
     RSS_FEEDS = [
         "https://arynews.tv/category/business/feed/",
     ]
+
+    # How many article pages to fetch in parallel when pulling full bodies
+    MAX_WORKERS = 8
 
     @staticmethod
     def parse_date(date_str):
@@ -82,6 +86,69 @@ class ARYNewsBusinessRSSPipeline:
             return content_html or ""
 
     @staticmethod
+    def fetch_full_description(link):
+        """
+        Fetch the full article body from the ARY News article page.
+
+        ARY's RSS feed only ever includes a short teaser in <description>
+        (a lead image + the title repeated) and never populates
+        <content:encoded>, so the real body has to be scraped from the
+        article page itself. The site runs on the tagDiv "Newspaper"
+        WordPress theme (identifiable by the "AA / Resize" font-size
+        widget on article pages), whose article body normally lives in
+        `div.td-post-content`. A few fallback selectors are tried in case
+        that changes.
+        """
+        try:
+            with cloudscraper.create_scraper() as scraper:
+                response = scraper.get(
+                    link,
+                    timeout=30,
+                    headers=get_random_headers(),
+                )
+                try:
+                    response.raise_for_status()
+                    payload = response.content
+                finally:
+                    response.close()
+
+            soup = BeautifulSoup(payload, "html.parser")
+
+            container = (
+                soup.select_one("div.post__content")
+                or soup.select_one("div.td-post-content")
+                or soup.select_one("div.tdb_single_content .tdb-block-inner")
+                or soup.select_one("div[itemprop='articleBody']")
+                or soup.select_one("div.entry-content")
+            )
+
+            if not container:
+                logger.warning(f"No article body container found for {link}")
+                return ""
+
+            # Strip share widgets / tags / related-posts blocks that can
+            # live inside the same container as the body text.
+            for junk in container.select(
+                "script, style, iframe, "
+                ".td-post-source-tags, .td-post-sharing-bottom, "
+                ".td_block_related_posts, .td-post-featured-image"
+            ):
+                junk.decompose()
+
+            for a_tag in container.find_all("a"):
+                a_tag.unwrap()
+
+            paragraphs = container.find_all(["p", "li"])
+            text = " ".join(p.get_text(" ", strip=True) for p in paragraphs)
+            text = re.sub(r"http\S+|www\.\S+", "", text)
+
+            return " ".join(text.split())
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch full description from {link}: {e}")
+            return ""
+
+    @staticmethod
     def fetch_rss_feed(feed_url):
         """Fetch and parse ARY News Business RSS feed."""
         try:
@@ -103,16 +170,14 @@ class ARYNewsBusinessRSSPipeline:
             items = soup.find_all("item")
             feed_build_date = datetime.now(timezone.utc)
 
-            articles = []
-
+            # First pass: collect lightweight metadata for every item
+            stubs = []
             for item in items:
                 try:
                     title_elem = item.find("title")
                     link_elem = item.find("link")
                     pub_date_elem = item.find("pubDate")
                     creator_elem = item.find("dc:creator")
-                    content_elem = item.find("content:encoded")
-                    desc_elem = item.find("description")
 
                     if not title_elem or not link_elem:
                         continue
@@ -126,15 +191,42 @@ class ARYNewsBusinessRSSPipeline:
                         else datetime.now(timezone.utc)
                     )
 
-                    if content_elem:
-                        content = ARYNewsBusinessRSSPipeline.clean_content(
-                            content_elem.get_text()
-                        )
-                    elif desc_elem:
-                        content = ARYNewsBusinessRSSPipeline.clean_content(
-                            desc_elem.get_text()
-                        )
-                    else:
+                    stubs.append(
+                        {
+                            "title": title,
+                            "link": link,
+                            "pub_date": pub_date,
+                            "authors": (
+                                creator_elem.get_text(strip=True)
+                                if creator_elem
+                                else "ARY News Business Desk"
+                            ),
+                        }
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to process ARY News article item: {e}")
+                    continue
+
+            # Second pass: fetch full article bodies in parallel
+            # (RSS never carries the full body for this source).
+            articles = []
+            with ThreadPoolExecutor(max_workers=ARYNewsBusinessRSSPipeline.MAX_WORKERS) as executor:
+                future_to_stub = {
+                    executor.submit(
+                        ARYNewsBusinessRSSPipeline.fetch_full_description, stub["link"]
+                    ): stub
+                    for stub in stubs
+                }
+
+                for future in as_completed(future_to_stub):
+                    stub = future_to_stub[future]
+                    title = stub["title"]
+                    link = stub["link"]
+
+                    try:
+                        content = future.result()
+                    except Exception as e:
+                        logger.warning(f"Failed to fetch full body for '{title}': {e}")
                         content = ""
 
                     if len(content) < 200:
@@ -144,14 +236,10 @@ class ARYNewsBusinessRSSPipeline:
                     article = {
                         "id": link,
                         "article_id": str(uuid.uuid4()),
-                        "articlePubDate": pub_date,
+                        "articlePubDate": stub["pub_date"],
                         "feedBuildDate": feed_build_date,
                         "title": title,
-                        "authors": (
-                            creator_elem.get_text(strip=True)
-                            if creator_elem
-                            else "ARY News Business Desk"
-                        ),
+                        "authors": stub["authors"],
                         "language": "en-US",
                         "source": ARYNewsBusinessRSSPipeline.SOURCE,
                         "content": content,
@@ -161,10 +249,6 @@ class ARYNewsBusinessRSSPipeline:
                     }
 
                     articles.append(article)
-
-                except Exception as e:
-                    logger.warning(f"Failed to process ARY News article item: {e}")
-                    continue
 
             logger.info(f"Parsed {len(articles)} ARY News business articles.")
             return articles
@@ -197,7 +281,7 @@ class ARYNewsBusinessRSSPipeline:
             return result
 
         except Exception as e:
-            logger.error(f"Tribune RSS pipeline failed: {e}")
+            logger.error(f"ARY News RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,
