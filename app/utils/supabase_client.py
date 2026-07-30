@@ -16,28 +16,29 @@ def _init_client(url: str, key: str, fallback=None):
     return fallback
 
 
-# Primary Supabase Clients
-supabase = _init_client(config.SUPABASE_URL, config.SUPABASE_KEY)
-fashion_supabase = _init_client(
-    config.SUPABASE_FASHION_URL, config.SUPABASE_FASHION_KEY, fallback=supabase
+# Category Supabase Clients
+medianest_supabase = _init_client(
+    config.SUPABASE_MEDIANEST_URL, config.SUPABASE_MEDIANEST_KEY
 )
-
-# System / Microservice Supabase Clients (Safely fall back to main client if unconfigured)
+fashion_supabase = _init_client(
+    config.SUPABASE_FASHION_URL, config.SUPABASE_FASHION_KEY, fallback=medianest_supabase
+)
+sports_supabase = _init_client(
+    config.SUPABASE_SPORTS_URL, config.SUPABASE_SPORTS_KEY, fallback=medianest_supabase
+)
+supabase = medianest_supabase
 fashionhub_supabase = _init_client(
-    config.SUPABASE_FASHIONHUB_URL, config.SUPABASE_FASHIONHUB_KEY, fallback=supabase
+    config.SUPABASE_FASHIONHUB_URL, config.SUPABASE_FASHIONHUB_KEY, fallback=fashion_supabase
 )
 houstonpulse_supabase = _init_client(
     config.SUPABASE_HOUSTONPULSE_URL,
     config.SUPABASE_HOUSTONPULSE_KEY,
-    fallback=supabase,
-)
-medianest_supabase = _init_client(
-    config.SUPABASE_MEDIANEST_URL, config.SUPABASE_MEDIANEST_KEY, fallback=supabase
+    fallback=medianest_supabase,
 )
 medianestdev_supabase = _init_client(
     config.SUPABASE_MEDIANESTDEV_URL,
     config.SUPABASE_MEDIANESTDEV_KEY,
-    fallback=supabase,
+    fallback=medianest_supabase,
 )
 meramurree_supabase = _init_client(
     config.SUPABASE_MERAMURREE_URL, config.SUPABASE_MERAMURREE_KEY, fallback=supabase
@@ -59,14 +60,21 @@ wafaq_supabase = _init_client(
 
 # System Name Mapping
 SYSTEM_CLIENT_MAP = {
-    "main": {"client": supabase, "table": config.BUSINESS_TABLE},
+    "business": {
+        "client": medianest_supabase or supabase,
+        "table": config.BUSINESS_TABLE,
+    },
     "fashion": {"client": fashion_supabase, "table": config.FASHION_TABLE},
     "fashionhub": {"client": fashionhub_supabase, "table": config.FASHIONHUB_TABLE},
     "houstonpulse": {
         "client": houstonpulse_supabase,
         "table": config.HOUSTONPULSE_TABLE,
     },
-    "medianest": {"client": medianest_supabase, "table": config.MEDIANEST_TABLE},
+    "medianest": {
+        "client": medianest_supabase or supabase,
+        "table": config.MEDIANEST_TABLE,
+    },
+    "sports": {"client": sports_supabase or supabase, "table": config.SPORTS_TABLE},
     "medianestdev": {
         "client": medianestdev_supabase,
         "table": config.MEDIANESTDEV_TABLE,
@@ -92,6 +100,7 @@ class SupabaseClient:
     @staticmethod
     def _upsert_articles(cleaned: list, table_name: str, client, max_retries: int = 3):
         import time
+
         if not cleaned or not client:
             return {"inserted_count": 0, "total_articles": 0}
 
@@ -106,8 +115,22 @@ class SupabaseClient:
                     total_inserted += len(batch)
                     break
                 except Exception as e:
+                    err_str = str(e)
+                    if "PGRST204" in err_str or "Could not find the" in err_str:
+                        for item in batch:
+                            item.pop("articlePubDate", None)
+                        try:
+                            client.table(table_name).upsert(
+                                batch, on_conflict="id"
+                            ).execute()
+                            total_inserted += len(batch)
+                            break
+                        except Exception as retry_e:
+                            e = retry_e
                     if attempt == max_retries - 1:
-                        logger.error(f"Supabase upsert failed after {max_retries} attempts: {e}")
+                        logger.error(
+                            f"Supabase upsert failed after {max_retries} attempts: {e}"
+                        )
                         raise e
                     time.sleep(0.5)
 
@@ -115,9 +138,32 @@ class SupabaseClient:
 
     @staticmethod
     def insert_articles(
-        article_list: list, table_name: str = MAIN_TABLE_NAME, client=None
+        article_list: list, table_name: str = MAIN_TABLE_NAME, client=None, category: str = None
     ):
-        target_client = client or supabase
+        if not client:
+            cat = (category or "").lower()
+            tb_lower = str(table_name or "").lower()
+            sample_genre = (
+                article_list[0].get("genre")
+                if article_list and isinstance(article_list[0], dict) and article_list[0].get("genre")
+                else ""
+            ).lower()
+
+            sports_genres = {
+                "sports", "hockey", "golf", "soccer", "football", "cricket",
+                "basketball", "baseball", "tennis", "mma", "ufc", "competition",
+                "player", "quiz", "motorsport", "athletics", "boxing", "squash"
+            }
+
+            if cat == "sports" or "sports" in tb_lower or "sportify" in tb_lower or sample_genre in sports_genres:
+                target_client = sports_supabase or sportifyhub_supabase or supabase
+            elif cat == "fashion" or "fashion" in tb_lower or sample_genre == "fashion":
+                target_client = fashion_supabase or fashionhub_supabase or supabase
+            else:
+                target_client = medianest_supabase or supabase
+        else:
+            target_client = client
+
         if not article_list or not target_client:
             return {"inserted_count": 0, "total_articles": 0}
 
@@ -140,20 +186,26 @@ class SupabaseClient:
             else:
                 tags_list = []
 
-            cleaned.append({
-                "id": a.get("id"),
-                "title": a.get("title"),
-                "content": a.get("content"),
-                "authors": a.get("authors"),
-                "tags": tags_list,
-                "image": a.get("image"),
-                "articlePubDate": a["articlePubDate"].isoformat() if a.get("articlePubDate") else None,
-                "created_at": batch_time,
-                "source": a.get("source"),
-                "genre": a.get("genre"),
-                "language": a.get("language"),
-                "media_origin": a.get("media_origin"),
-            })
+            cleaned.append(
+                {
+                    "id": a.get("id"),
+                    "title": a.get("title"),
+                    "content": a.get("content"),
+                    "authors": a.get("authors"),
+                    "tags": tags_list,
+                    "image": a.get("image"),
+                    "articlePubDate": (
+                        a["articlePubDate"].isoformat()
+                        if a.get("articlePubDate")
+                        else None
+                    ),
+                    "created_at": batch_time,
+                    "source": a.get("source"),
+                    "genre": a.get("genre"),
+                    "language": a.get("language"),
+                    "media_origin": a.get("media_origin"),
+                }
+            )
 
         return SupabaseClient._upsert_articles(
             cleaned=cleaned, table_name=table_name, client=target_client
@@ -234,20 +286,26 @@ class SupabaseClient:
             else:
                 tags_list = []
 
-            cleaned.append({
-                "id": a.get("id"),
-                "title": a.get("title"),
-                "content": a.get("content"),
-                "authors": a.get("authors"),
-                "tags": tags_list,
-                "image": a.get("image"),
-                "created_at": batch_time,
-                "articlePubDate": a["articlePubDate"].isoformat() if a.get("articlePubDate") else None,
-                "source": a.get("source"),
-                "genre": a.get("genre"),
-                "language": a.get("language"),
-                "media_origin": a.get("media_origin"),
-            })
+            cleaned.append(
+                {
+                    "id": a.get("id"),
+                    "title": a.get("title"),
+                    "content": a.get("content"),
+                    "authors": a.get("authors"),
+                    "tags": tags_list,
+                    "image": a.get("image"),
+                    "created_at": batch_time,
+                    "articlePubDate": (
+                        a["articlePubDate"].isoformat()
+                        if a.get("articlePubDate")
+                        else None
+                    ),
+                    "source": a.get("source"),
+                    "genre": a.get("genre"),
+                    "language": a.get("language"),
+                    "media_origin": a.get("media_origin"),
+                }
+            )
 
         return SupabaseClient._upsert_articles(
             cleaned=cleaned, table_name=table_name, client=target_client

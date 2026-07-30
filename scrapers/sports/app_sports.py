@@ -1,24 +1,23 @@
-from config import BUSINESS_TABLE
+from config import SPORTS_TABLE
 import uuid
 import logging
 from datetime import datetime, timezone
-import time
 import concurrent.futures
 from bs4 import BeautifulSoup
 import re
 import requests
-
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
 logger = logging.getLogger(__name__)
 
 
-class DecryptRSSPipeline:
+class APPSportsRSSPipeline:
 
-    SOURCE = "Decrypt"
+    SOURCE = "Associated Press Of Pakistan"
+
     RSS_FEEDS = [
-        "https://decrypt.co/feed"
+        "https://www.app.com.pk/sports/feed/",
     ]
 
     HEADERS = {
@@ -33,21 +32,18 @@ class DecryptRSSPipeline:
     }
 
     @staticmethod
-    def parse_date(date_str):
-        formats = [
-            "%a, %d %b %Y %H:%M:%S %Z",
-            "%a, %d %b %Y %H:%M:%S %z",
-        ]
-        for fmt in formats:
-            try:
-                dt = datetime.strptime(date_str, fmt)
-                return dt.replace(tzinfo=timezone.utc)
-            except ValueError:
-                continue
-        return datetime.now(timezone.utc)
+    def parse_rss_date(date_str):
+        """Parse RSS pubDate into UTC datetime."""
+        try:
+            return datetime.strptime(
+                date_str, "%a, %d %b %Y %H:%M:%S %z"
+            ).astimezone(timezone.utc)
+        except Exception:
+            return datetime.now(timezone.utc)
 
     @staticmethod
     def clean_content(text):
+        """Clean text by removing URLs and extra spaces."""
         if not text:
             return ""
         text = re.sub(r"http\S+|www\.\S+", "", text)
@@ -55,51 +51,54 @@ class DecryptRSSPipeline:
 
     @staticmethod
     def full_description(link):
-        content = None
-        author = "Unknown"
-
         if not link:
-            return None, author
+            return None
 
         try:
             res = requests.get(
                 link,
                 timeout=30,
-                headers=get_random_headers(DecryptRSSPipeline.HEADERS),
+                headers=get_random_headers(APPSportsRSSPipeline.HEADERS)
             )
             res.raise_for_status()
-            soup = BeautifulSoup(res.text, "lxml")
 
+            soup = BeautifulSoup(res.text, "html.parser")
             paragraphs = []
-            for p in soup.select("div[class*='grid-cols-'] p span"):
+
+            for p in soup.select("div.entry-content > p"):
                 text = p.get_text(strip=True)
-                if len(text) < 30:
+                if len(text) < 40:
                     continue
-                if any(x in text for x in ("©", "Decrypt", "All rights reserved")):
+
+                if any(x in text for x in (
+                    "Associated Press Of Pakistan",
+                    "first appeared on",
+                    "owns the property"
+                )):
                     continue
-                paragraphs.append(DecryptRSSPipeline.clean_content(text))
+
+                paragraphs.append(
+                    APPSportsRSSPipeline.clean_content(text)
+                )
 
             if paragraphs:
-                content = " ".join(paragraphs)
-
-            author_elem = soup.select_one("div span span.underline a")
-            if author_elem:
-                author = author_elem.get_text(strip=True)
+                return " ".join(paragraphs)
 
         except Exception as e:
-            logger.warning(f"Failed to fetch full article {link}: {e}")
+            logger.warning(f"Failed to fetch APP article {link}: {e}")
 
-        return content, author
+        return None
 
     @staticmethod
-    def fetch_decrypt_rss_feed(feed_url):
+    def fetch_app_feed(feed_url):
+        """Fetch and parse APP Sports RSS feed."""
         try:
-            logger.info(f"Fetching Decrypt RSS feed: {feed_url}")
+            logger.info(f"Fetching APP Sports feed: {feed_url}")
 
             response = requests.get(
                 feed_url,
                 timeout=30,
-                headers=get_random_headers(DecryptRSSPipeline.HEADERS),
+                headers=get_random_headers(APPSportsRSSPipeline.HEADERS)
             )
             response.raise_for_status()
 
@@ -114,14 +113,17 @@ class DecryptRSSPipeline:
                     title = item.find("title").get_text(strip=True)
                     link = item.find("link").get_text(strip=True)
 
-                    pub_date = item.find("pubDate")
+                    pub_date_tag = item.find("pubDate")
                     article_pub_date = (
-                        DecryptRSSPipeline.parse_date(pub_date.get_text())
-                        if pub_date
-                        else feed_build_date
+                        APPSportsRSSPipeline.parse_rss_date(pub_date_tag.get_text())
+                        if pub_date_tag else feed_build_date
                     )
 
-                    content, author = DecryptRSSPipeline.full_description(link)
+                    author_tag = item.find("dc:creator")
+                    author = author_tag.get_text(strip=True) if author_tag else "Unknown"
+
+                    content = APPSportsRSSPipeline.full_description(link)
+
                     if not content:
                         continue
 
@@ -133,36 +135,34 @@ class DecryptRSSPipeline:
                         "title": title,
                         "authors": author,
                         "language": "en-us",
-                        "source": DecryptRSSPipeline.SOURCE,
+                        "source": APPSportsRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": "Crypto",
-                        "media_origin": "foreign",
+                        "genre": "Sports",
+                        "media_origin": "local",
                         "tags": [],
                     })
 
                 except Exception as e:
-                    logger.warning(f"Failed to process item: {e}")
+                    logger.warning(f"Failed to process APP item: {e}")
                     continue
 
             logger.info(f"Parsed {len(articles)} articles from {feed_url}")
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch RSS feed {feed_url}: {e}")
+            logger.error(f"Failed to fetch APP Sports feed {feed_url}: {e}")
             return []
 
     @staticmethod
     def process_input(input_data=None):
+        """Process all APP Sports feeds concurrently."""
         all_articles = []
-        logger.info("Starting Decrypt RSS pipeline (concurrent)")
+        logger.info("Starting APP Sports RSS pipeline")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [
-                executor.submit(
-                    DecryptRSSPipeline.fetch_decrypt_rss_feed,
-                    feed
-                )
-                for feed in DecryptRSSPipeline.RSS_FEEDS
+                executor.submit(APPSportsRSSPipeline.fetch_app_feed, feed)
+                for feed in APPSportsRSSPipeline.RSS_FEEDS
             ]
 
             for future in concurrent.futures.as_completed(futures):
@@ -171,25 +171,29 @@ class DecryptRSSPipeline:
                 except Exception:
                     logger.exception("Failed to process feed")
 
-        logger.info(f"Total articles processed: {len(all_articles)}")
+        logger.info(f"Total APP Sports articles processed: {len(all_articles)}")
         return all_articles
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = BUSINESS_TABLE
-            all_articles = DecryptRSSPipeline.process_input()
+            target_table = SPORTS_TABLE
+            all_articles = APPSportsRSSPipeline.process_input()
 
+            # Deduplicate by id (link)
             all_articles = list(
                 {article["id"]: article for article in all_articles}.values()
             )
 
-            logger.info(f"After dedupe: {len(all_articles)} articles")
+            logger.info(
+                f"After dedupe: {len(all_articles)} articles"
+            )
 
-            return SupabaseClient.insert_articles(all_articles, table_name=target_table)
+            result = SupabaseClient.insert_articles(all_articles, table_name=target_table, category="sports")
+            return result
 
         except Exception as e:
-            logger.error(f"Decrypt RSS pipeline failed: {e}")
+            logger.error(f"APP Sports RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

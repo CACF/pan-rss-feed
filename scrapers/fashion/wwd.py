@@ -124,7 +124,7 @@ class WWDRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or FASHION_TABLE
+        target_table = FASHION_TABLE
         all_articles = []
         for f in WWDRSSPipeline.RSS_FEEDS:
             all_articles.extend(WWDRSSPipeline.fetch_rss_feed(f))

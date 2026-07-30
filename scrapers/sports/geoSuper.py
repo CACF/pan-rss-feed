@@ -206,7 +206,7 @@ class GeosuperScraper:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or SPORTS_TABLE
+            target_table = SPORTS_TABLE
             article_links = GeosuperScraper.fetch_article_links()
 
             logger.info(f"Found {len(article_links)} article links")
@@ -236,7 +236,7 @@ class GeosuperScraper:
             logger.info(f"After dedupe: {len(all_articles)} articles")
 
             result = SupabaseClient.insert_articles(
-                all_articles, table_name=target_table
+                all_articles, table_name=target_table, category="sports"
             )
 
             return result

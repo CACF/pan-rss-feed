@@ -258,7 +258,7 @@ class GoalSportsNewsPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or SPORTS_TABLE
+            target_table = SPORTS_TABLE
             all_articles = []
 
             for sitemap in GoalSportsNewsPipeline.SITEMAPS:
@@ -271,7 +271,7 @@ class GoalSportsNewsPipeline:
                     "total_articles": 0,
                 }
 
-            return SupabaseClient.insert_articles(all_articles, table_name=target_table)
+            return SupabaseClient.insert_articles(all_articles, table_name=target_table, category="sports")
 
         except Exception as e:
             logger.error(f"Goal pipeline failed: {e}")

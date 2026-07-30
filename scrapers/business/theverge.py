@@ -161,7 +161,7 @@ class TheVergeRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = TheVergeRSSPipeline.process_input()
 
             # Deduplicate by id (link)

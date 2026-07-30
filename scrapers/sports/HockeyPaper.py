@@ -1,3 +1,4 @@
+from config import SPORTS_TABLE
 import re
 import uuid
 import logging
@@ -159,9 +160,7 @@ class HockeyPaperScraper:
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or SPORTS_TABLE
-        from config import SPORTS_TABLE
-
+        target_table = SPORTS_TABLE
         try:
             article_links = HockeyPaperScraper.fetch_article_links()
 
@@ -191,7 +190,7 @@ class HockeyPaperScraper:
             logger.info(f"After dedupe: {len(all_articles)} articles")
 
             result = SupabaseClient.insert_articles(
-                all_articles, table_name=target_table
+                all_articles, table_name=target_table, category="sports"
             )
 
             return result

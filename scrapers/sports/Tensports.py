@@ -125,6 +125,11 @@ class TenSportsRSSPipeline:
                     title = title_elem.get_text(strip=True)
                     link = link_elem.get_text(strip=True)
 
+                    spam_keywords = ["casino", "gambling", "slot", "betting", "gzone", "gamezone"]
+                    if any(sk in title.lower() or sk in link.lower() for sk in spam_keywords):
+                        logger.info(f"Skipping non-sports casino post in TenSports: '{title}' ({link})")
+                        continue
+
                     pub_date = (
                         TenSportsRSSPipeline.parse_date(pub_date_elem.get_text())
                         if pub_date_elem
@@ -204,7 +209,7 @@ class TenSportsRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or SPORTS_TABLE
+            target_table = SPORTS_TABLE
             all_articles = []
 
             for feed_url in TenSportsRSSPipeline.RSS_FEEDS:
@@ -218,7 +223,7 @@ class TenSportsRSSPipeline:
             logger.info(f"After dedupe: {len(all_articles)} articles")
 
             result = SupabaseClient.insert_articles(
-                all_articles, table_name=target_table
+                all_articles, table_name=target_table, category="sports"
             )
 
             return result

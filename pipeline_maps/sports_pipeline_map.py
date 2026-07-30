@@ -24,6 +24,11 @@ from scrapers.sports.FIHHockey import FIHHockeyScraper
 from scrapers.sports.HockeyPaper import HockeyPaperScraper
 from scrapers.sports.geoSuper import GeosuperScraper
 from scrapers.sports.sportsNet import SportsnetScraper
+from scrapers.sports.dp_sports import DailyPakistanSportsRSSPipeline
+from scrapers.sports.app_sports import APPSportsRSSPipeline
+from scrapers.sports.bol_sports import BOLNewsSportsRSSPipeline
+from scrapers.sports.trb_sports import TribuneSportsRSSPipeline
+from scrapers.sports.tc_sports import TradeChronicleSportsRSSPipeline
 
 SCRAPERS = [
     ASportsFootballRSSPipeline,
@@ -45,4 +50,9 @@ SCRAPERS = [
     HockeyPaperScraper,
     GeosuperScraper,
     SportsnetScraper,
+    DailyPakistanSportsRSSPipeline,
+    APPSportsRSSPipeline,
+    BOLNewsSportsRSSPipeline,
+    TribuneSportsRSSPipeline,
+    TradeChronicleSportsRSSPipeline,
 ]

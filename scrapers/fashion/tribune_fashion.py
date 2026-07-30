@@ -216,7 +216,7 @@ class ExpressTribuneFashionRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or FASHION_TABLE
+            target_table = FASHION_TABLE
             all_articles = []
 
             for feed_url in ExpressTribuneFashionRSSPipeline.RSS_FEEDS:

@@ -187,7 +187,7 @@ class ASportsFootballRSSPipeline:
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or SPORTS_TABLE
+        target_table = SPORTS_TABLE
 
         try:
 
@@ -204,7 +204,7 @@ class ASportsFootballRSSPipeline:
             logger.info(f"After dedupe: {len(all_articles)} articles")
 
             result = SupabaseClient.insert_articles(
-                all_articles, table_name=target_table
+                all_articles, table_name=target_table, category="sports"
             )
 
             return result

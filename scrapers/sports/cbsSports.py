@@ -139,7 +139,7 @@ class CBSSportsScraper:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or SPORTS_TABLE
+            target_table = SPORTS_TABLE
             items = CBSSportsScraper.fetch_rss()
 
             logger.info(f"RSS items found: {len(items)}")
@@ -162,7 +162,7 @@ class CBSSportsScraper:
 
             logger.info(f"Final articles after dedupe: {len(articles)}")
 
-            return SupabaseClient.insert_articles(articles, table_name=target_table)
+            return SupabaseClient.insert_articles(articles, table_name=target_table, category="sports")
 
         except Exception as e:
             logger.error(f"CBS pipeline failed: {e}")

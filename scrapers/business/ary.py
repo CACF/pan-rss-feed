@@ -210,7 +210,9 @@ class ARYNewsBusinessRSSPipeline:
             # Second pass: fetch full article bodies in parallel
             # (RSS never carries the full body for this source).
             articles = []
-            with ThreadPoolExecutor(max_workers=ARYNewsBusinessRSSPipeline.MAX_WORKERS) as executor:
+            with ThreadPoolExecutor(
+                max_workers=ARYNewsBusinessRSSPipeline.MAX_WORKERS
+            ) as executor:
                 future_to_stub = {
                     executor.submit(
                         ARYNewsBusinessRSSPipeline.fetch_full_description, stub["link"]
@@ -260,7 +262,7 @@ class ARYNewsBusinessRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = []
 
             for feed_url in ARYNewsBusinessRSSPipeline.RSS_FEEDS:

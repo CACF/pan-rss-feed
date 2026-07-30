@@ -1,4 +1,4 @@
-from config import BUSINESS_TABLE
+from config import SPORTS_TABLE
 import re
 import uuid
 import logging
@@ -12,11 +12,11 @@ from app.utils.supabase_client import SupabaseClient
 logger = logging.getLogger(__name__)
 
 
-class BOLNewsBusinessRSSPipeline:
+class BOLNewsSportsRSSPipeline:
 
     SOURCE = "BOLNews"
     RSS_FEEDS = [
-        "https://www.bolnews.com/category/business/feed/",
+        "https://www.bolnews.com/category/sports/feed/",
     ]
 
     @staticmethod
@@ -33,22 +33,17 @@ class BOLNewsBusinessRSSPipeline:
 
     @staticmethod
     def clean_content(content_html):
-        """
-        Clean WordPress RSS HTML
-        """
         if not content_html:
             return ""
 
         try:
             soup = BeautifulSoup(content_html, "html.parser")
-
             for tag in soup(
                 ["script", "style", "iframe", "noscript", "img", "figure"]
             ):
                 tag.decompose()
 
             text = soup.get_text(separator=" ")
-
             text = re.sub(
                 r"The post .*? appeared first on .*?\.",
                 "",
@@ -56,7 +51,6 @@ class BOLNewsBusinessRSSPipeline:
                 flags=re.IGNORECASE,
             )
             text = re.sub(r"http\S+|www\.\S+", "", text)
-
             return " ".join(text.split())
 
         except Exception as e:
@@ -65,11 +59,6 @@ class BOLNewsBusinessRSSPipeline:
 
     @staticmethod
     def full_description(article_url):
-        """
-        Scrape full article content from BOL News article page
-        CSS selector:
-        .elementor-widget-theme-post-content p
-        """
         if not article_url:
             return ""
 
@@ -89,7 +78,6 @@ class BOLNewsBusinessRSSPipeline:
                     response.close()
 
             soup = BeautifulSoup(html, "html.parser")
-
             paragraphs = soup.select(
                 ".elementor-widget-theme-post-content p"
             )
@@ -107,7 +95,6 @@ class BOLNewsBusinessRSSPipeline:
                     content_parts.append(text)
 
             content = " ".join(content_parts)
-
             content = re.sub(
                 r"The post .*? appeared first on .*?\.",
                 "",
@@ -115,7 +102,6 @@ class BOLNewsBusinessRSSPipeline:
                 flags=re.IGNORECASE,
             )
             content = re.sub(r"http\S+|www\.\S+", "", content)
-
             return " ".join(content.split())
 
         except Exception as e:
@@ -127,7 +113,7 @@ class BOLNewsBusinessRSSPipeline:
     @staticmethod
     def fetch_rss_feed(feed_url):
         try:
-            logger.info(f"Fetching BOL News RSS feed: {feed_url}")
+            logger.info(f"Fetching BOL News Sports RSS feed: {feed_url}")
 
             with cloudscraper.create_scraper() as scraper:
                 response = scraper.get(
@@ -155,7 +141,6 @@ class BOLNewsBusinessRSSPipeline:
                     author_elem = item.find("dc:creator")
                     desc_elem = item.find("description")
                     category_elems = item.find_all("category")
-                    image_elems = None
 
                     if not title_elem or not link_elem:
                         continue
@@ -164,20 +149,20 @@ class BOLNewsBusinessRSSPipeline:
                     link = link_elem.get_text(strip=True)
 
                     pub_date = (
-                        BOLNewsBusinessRSSPipeline.parse_date(
+                        BOLNewsSportsRSSPipeline.parse_date(
                             pub_date_elem.get_text()
                         )
                         if pub_date_elem
                         else datetime.now(timezone.utc)
                     )
 
-                    content = BOLNewsBusinessRSSPipeline.full_description(
+                    content = BOLNewsSportsRSSPipeline.full_description(
                         link
                     )
 
                     if len(content) < 150 and desc_elem:
                         content = (
-                            BOLNewsBusinessRSSPipeline.clean_content(
+                            BOLNewsSportsRSSPipeline.clean_content(
                                 desc_elem.get_text()
                             )
                         )
@@ -191,15 +176,14 @@ class BOLNewsBusinessRSSPipeline:
                     authors = (
                         author_elem.get_text(strip=True)
                         if author_elem
-                        else "BOL News Business Desk"
+                        else "BOL News Sports Desk"
                     )
 
                     tags = [
                         cat.get_text(strip=True)
                         for cat in category_elems
-                        if cat.get_text(strip=True).lower() != "business"
+                        if cat.get_text(strip=True).lower() != "sports"
                     ]
-                    
 
                     article = {
                         "id": link,
@@ -209,16 +193,10 @@ class BOLNewsBusinessRSSPipeline:
                         "title": title,
                         "authors": authors,
                         "language": "en-US",
-                        "image" : image_elems,
-                        "source": BOLNewsBusinessRSSPipeline.SOURCE,
+                        "image": None,
+                        "source": BOLNewsSportsRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": (
-                                    "Business"
-                                    if "business" in feed_url.lower()
-                                    else "Sports"
-                                    if "sports" in feed_url.lower()
-                                    else ""
-                                ),
+                        "genre": "Sports",
                         "media_origin": "local",
                         "tags": tags,
                     }
@@ -232,7 +210,7 @@ class BOLNewsBusinessRSSPipeline:
                     continue
 
             logger.info(
-                f"Parsed {len(articles)} BOL News business articles."
+                f"Parsed {len(articles)} BOL News sports articles."
             )
             return articles
 
@@ -243,11 +221,11 @@ class BOLNewsBusinessRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = BUSINESS_TABLE
+            target_table = SPORTS_TABLE
             all_articles = []
 
-            for feed_url in BOLNewsBusinessRSSPipeline.RSS_FEEDS:
-                articles = BOLNewsBusinessRSSPipeline.fetch_rss_feed(feed_url)
+            for feed_url in BOLNewsSportsRSSPipeline.RSS_FEEDS:
+                articles = BOLNewsSportsRSSPipeline.fetch_rss_feed(feed_url)
                 all_articles.extend(articles)
 
             # Deduplicate by id (link)
@@ -259,12 +237,11 @@ class BOLNewsBusinessRSSPipeline:
                 f"After dedupe: {len(all_articles)} articles"
             )
 
-            result = SupabaseClient.insert_articles(all_articles, table_name=target_table)
-
+            result = SupabaseClient.insert_articles(all_articles, table_name=target_table, category="sports")
             return result
 
         except Exception as e:
-            logger.error(f"BOL News Business RSS pipeline failed: {e}")
+            logger.error(f"BOL News Sports RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

@@ -162,7 +162,7 @@ class FinancialDailyBusinessPipeline:
     @classmethod
     def run_pipeline(cls, input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             links = cls.fetch_article_links()
             all_articles = []
 

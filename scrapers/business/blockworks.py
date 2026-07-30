@@ -167,7 +167,7 @@ class BlockworksRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = []
 
             for feed_url in BlockworksRSSPipeline.RSS_FEEDS:

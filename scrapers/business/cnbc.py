@@ -214,7 +214,7 @@ class CNBCRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             logger.info("Starting CNBC RSS pipeline")
 
             all_articles = CNBCRSSPipeline.process_input()

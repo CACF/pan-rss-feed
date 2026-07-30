@@ -234,7 +234,7 @@ class EyefootballRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or SPORTS_TABLE
+            target_table = SPORTS_TABLE
             all_articles = []
 
             for feed in EyefootballRSSPipeline.FEEDS:
@@ -243,7 +243,7 @@ class EyefootballRSSPipeline:
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}
 
-            return SupabaseClient.insert_articles(all_articles, table_name=target_table)
+            return SupabaseClient.insert_articles(all_articles, table_name=target_table, category="sports")
 
         except Exception as e:
             logger.error(f"Pipeline failed: {e}")

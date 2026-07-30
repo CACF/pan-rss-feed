@@ -194,7 +194,7 @@ class HMagFashionPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or FASHION_TABLE
+            target_table = FASHION_TABLE
             feed_items = HMagFashionPipeline.fetch_listing()
 
             if not feed_items:

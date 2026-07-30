@@ -188,7 +188,7 @@ class TheBlockRSSPipeline:
     @classmethod
     def run_pipeline(cls, input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = []
 
             for feed_url in cls.RSS_FEEDS:

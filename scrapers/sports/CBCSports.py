@@ -1,3 +1,4 @@
+from config import SPORTS_TABLE
 import re
 import uuid
 import logging
@@ -452,12 +453,9 @@ class CBCSportsScraper:
             logger.error(f"Failed to fetch all articles: {e}")
             return []
 
-    @staticmethod
-    def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or SPORTS_TABLE
-        """Main pipeline to run the CBC Sports scraper."""
-        from config import SPORTS_TABLE
-
+    @classmethod
+    def run_pipeline(cls, input_data=None, table_name=None):
+        target_table = SPORTS_TABLE
         try:
             logger.info("Starting CBC Sports scraper pipeline...")
 
@@ -528,7 +526,7 @@ class CBCSportsScraper:
 
             # Step 3: Insert into database
             result = SupabaseClient.insert_articles(
-                all_articles, table_name=target_table
+                all_articles, table_name=target_table, category="sports"
             )
             logger.info(
                 f"Inserted {result.get('inserted_count', 0)} articles into database"

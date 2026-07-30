@@ -16,7 +16,6 @@ class DailyPakistanBusinessRSSPipeline:
     SOURCE = "DailyPakistan"
     RSS_FEEDS = [
         "https://en.dailypakistan.com.pk/business/feed",
-        "https://en.dailypakistan.com.pk/sports/feed"
     ]
 
     @staticmethod
@@ -134,9 +133,7 @@ class DailyPakistanBusinessRSSPipeline:
                         content = ""
 
                     if len(content) < 200:
-                        logger.info(
-                            f"Skipped article '{title}' (content < 200 chars)"
-                        )
+                        logger.info(f"Skipped article '{title}' (content < 200 chars)")
                         continue
 
                     article = {
@@ -153,13 +150,11 @@ class DailyPakistanBusinessRSSPipeline:
                         "language": "en-US",
                         "source": DailyPakistanBusinessRSSPipeline.SOURCE,
                         "content": content,
-                        "genre":  (
-                                    "Business"
-                                    if "business" in feed_url.lower()
-                                    else "Sports"
-                                    if "sports" in feed_url.lower()
-                                    else ""
-                                ),
+                        "genre": (
+                            "Business"
+                            if "business" in feed_url.lower()
+                            else "Sports" if "sports" in feed_url.lower() else ""
+                        ),
                         "media_origin": "local",
                         "tags": [],
                     }
@@ -172,9 +167,7 @@ class DailyPakistanBusinessRSSPipeline:
                     )
                     continue
 
-            logger.info(
-                f"Parsed {len(articles)} Daily Pakistan business articles."
-            )
+            logger.info(f"Parsed {len(articles)} Daily Pakistan business articles.")
             return articles
 
         except Exception as e:
@@ -184,7 +177,7 @@ class DailyPakistanBusinessRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = []
 
             for feed_url in DailyPakistanBusinessRSSPipeline.RSS_FEEDS:
@@ -196,16 +189,16 @@ class DailyPakistanBusinessRSSPipeline:
                 {article["id"]: article for article in all_articles}.values()
             )
 
-            logger.info(
-                f"After dedupe: {len(all_articles)} articles"
-            )
+            logger.info(f"After dedupe: {len(all_articles)} articles")
 
-            result = SupabaseClient.insert_articles(all_articles, table_name=target_table)
+            result = SupabaseClient.insert_articles(
+                all_articles, table_name=target_table
+            )
 
             return result
 
         except Exception as e:
-            logger.error(f"Tribune RSS pipeline failed: {e}")
+            logger.error(f"Daily Pakistan Business RSS pipeline failed: {e}")
             return {
                 "inserted_count": 0,
                 "total_articles": 0,

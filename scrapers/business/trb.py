@@ -17,7 +17,6 @@ class TribuneRSSPipeline:
     SOURCE = "Tribune"
     RSS_FEEDS = [
         "https://tribune.com.pk/feed/business",
-        "https://tribune.com.pk/feed/sports"
     ]
 
     @staticmethod
@@ -78,7 +77,9 @@ class TribuneRSSPipeline:
             logger.info(f"Fetching Tribune RSS feed: {feed_url}")
 
             with cloudscraper.create_scraper() as scraper:
-                response = scraper.get(feed_url, timeout=30, headers=get_random_headers())
+                response = scraper.get(
+                    feed_url, timeout=30, headers=get_random_headers()
+                )
                 try:
                     response.raise_for_status()
                     payload = response.content
@@ -109,6 +110,17 @@ class TribuneRSSPipeline:
 
                     title = title_elem.get_text(strip=True)
                     link = link_elem.get_text(strip=True)
+
+                    categories = [
+                        cat.get_text(strip=True).lower()
+                        for cat in item.find_all("category")
+                    ]
+                    if "/sports" in link.lower() or "sports" in categories:
+                        logger.info(
+                            f"Skipping sports article in Business pipeline: '{title}' ({link})"
+                        )
+                        continue
+
                     pub_date = (
                         TribuneRSSPipeline.parse_date(pub_date_elem.get_text())
                         if pub_date_elem
@@ -116,16 +128,20 @@ class TribuneRSSPipeline:
                     )
 
                     if content_elem:
-                        content = TribuneRSSPipeline.clean_content(content_elem.get_text())
+                        content = TribuneRSSPipeline.clean_content(
+                            content_elem.get_text()
+                        )
                     elif desc_elem:
                         content = TribuneRSSPipeline.clean_content(desc_elem.get_text())
                     else:
                         content = ""
-                        
+
                     if len(content) < 200:
-                        logger.info(f"Skipped article '{title}' due to content length < 200 chars")
+                        logger.info(
+                            f"Skipped article '{title}' due to content length < 200 chars"
+                        )
                         continue
-                    
+
                     article = {
                         "id": link,
                         "article_id": str(uuid.uuid4()),
@@ -137,7 +153,7 @@ class TribuneRSSPipeline:
                         "image": image_url if image else None,
                         "source": TribuneRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": "Business" if "business" in feed_url.lower() else "Sports" if "Sports" in feed_url else "",
+                        "genre": ("Business" if "business" in feed_url.lower() else ""),
                         "media_origin": "local",
                         "tags": [],
                     }
@@ -154,11 +170,11 @@ class TribuneRSSPipeline:
         except Exception as e:
             logger.error(f"Failed to fetch Tribune RSS feed: {e}")
             return []
-        
+
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = []
 
             for feed_url in TribuneRSSPipeline.RSS_FEEDS:
@@ -170,11 +186,11 @@ class TribuneRSSPipeline:
                 {article["id"]: article for article in all_articles}.values()
             )
 
-            logger.info(
-                f"After dedupe: {len(all_articles)} articles"
-            )
+            logger.info(f"After dedupe: {len(all_articles)} articles")
 
-            result = SupabaseClient.insert_articles(all_articles, table_name=target_table)
+            result = SupabaseClient.insert_articles(
+                all_articles, table_name=target_table
+            )
 
             return result
 

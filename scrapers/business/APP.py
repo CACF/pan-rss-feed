@@ -19,7 +19,6 @@ class APPBusinessRSSPipeline:
 
     RSS_FEEDS = [
         "https://www.app.com.pk/business/feed/",
-        "https://www.app.com.pk/sports/feed/"
     ]
 
     HEADERS = {
@@ -190,7 +189,7 @@ class APPBusinessRSSPipeline:
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
         try:
-            target_table = table_name or BUSINESS_TABLE
+            target_table = BUSINESS_TABLE
             all_articles = APPBusinessRSSPipeline.process_input()
 
             # Deduplicate by id (link)

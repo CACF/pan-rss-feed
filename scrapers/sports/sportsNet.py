@@ -374,7 +374,7 @@ class SportsnetScraper:
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):
-        target_table = table_name or SPORTS_TABLE
+        target_table = SPORTS_TABLE
         """Main pipeline to run the Sportsnet scraper."""
         try:
             logger.info("Starting Sportsnet scraper pipeline...")
@@ -432,7 +432,7 @@ class SportsnetScraper:
                 )
 
                 result = SupabaseClient.insert_articles(
-                    all_articles, table_name=target_table
+                    all_articles, table_name=target_table, category="sports"
                 )
                 logger.info(f"Inserted {result.get('inserted_count', 0)} articles")
                 return result
