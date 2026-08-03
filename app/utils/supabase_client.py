@@ -13,7 +13,7 @@ SUPABASE_HOUSTONPULSE_URL = os.getenv("SUPABASE_HOUSTONPULSE_URL")
 SUPABASE_HOUSTONPULSE_KEY = os.getenv("SUPABASE_HOUSTONPULSE_KEY")
 
 # Table names
-HOUSTONPULSE_TABLE_NAME = "news_test"
+HOUSTONPULSE_TABLE_NAME = "news"
 
 # Houston-Pulse Supabase client
 houstonpulse_supabase = create_client(
