@@ -6,88 +6,61 @@ load_dotenv()
 # ==============================================================================
 # 1. DATABASE TABLE MODE SWITCHER (SINGLE SOURCE OF TRUTH)
 # ==============================================================================
-# Comment / uncomment ONE line below to switch all tables project-wide:
+# Change TABLE_PREFIX to "news" for production mode, or "news_test" for testing mode.
+TABLE_PREFIX = "news_test"
 
-# DEFAULT_TABLE_NAME = "news_test"  # TESTING MODE
-DEFAULT_TABLE_NAME = "news"  # PRODUCTION MODE (Default)
+# Explicit table mapping for each category / system
+TABLES = {
+    "business": f"{TABLE_PREFIX}",
+    "sports": f"{TABLE_PREFIX}",
+    "fashion": f"{TABLE_PREFIX}",
+    "houstonpulse": f"{TABLE_PREFIX}",
+    "meramurree": f"{TABLE_PREFIX}",
+    "wafaq": f"{TABLE_PREFIX}",
+    "entertainment": f"{TABLE_PREFIX}",
+}
 
-# Master Table Default (reads from .env if present, otherwise uses DEFAULT_TABLE_NAME above)
-TABLE_NAME = os.getenv("DEFAULT_TABLE_NAME", DEFAULT_TABLE_NAME)
-
-
-# ==============================================================================
-# 2. CATEGORY & SYSTEM TABLE MAPPINGS
-# (All categories automatically inherit TABLE_NAME unless explicitly overridden)
-# ==============================================================================
-
-BUSINESS_TABLE = os.getenv("BUSINESS_TABLE", os.getenv("MEDIANEST_TABLE", TABLE_NAME))
-SPORTS_TABLE = os.getenv("SPORTS_TABLE", os.getenv("SPORTIFYHUB_TABLE", TABLE_NAME))
-FASHION_TABLE = os.getenv("FASHION_TABLE", os.getenv("FASHIONHUB_TABLE", TABLE_NAME))
-ENTERTAINMENT_TABLE = os.getenv("ENTERTAINMENT_TABLE", TABLE_NAME)
-FASHIONHUB_TABLE = os.getenv("FASHIONHUB_TABLE", FASHION_TABLE)
-HOUSTONPULSE_TABLE = os.getenv(
-    "HOUSTONPULSE_TABLE", os.getenv("HOUSTANPULSE_TABLE", TABLE_NAME)
-)
-HOUSTANPULSE_TABLE = HOUSTONPULSE_TABLE
-MEDIANEST_TABLE = os.getenv("MEDIANEST_TABLE", BUSINESS_TABLE)
-MEDIANESTDEV_TABLE = os.getenv("MEDIANESTDEV_TABLE", TABLE_NAME)
-MERAMURREE_TABLE = os.getenv(
-    "MERAMURREE_TABLE", os.getenv("MERAMUREE_TABLE", TABLE_NAME)
-)
-MERAMUREE_TABLE = MERAMURREE_TABLE
-MERAPESHAWAR_TABLE = os.getenv("MERAPESHAWAR_TABLE", TABLE_NAME)
-SPORTIFYHUB_TABLE = os.getenv("SPORTIFYHUB_TABLE", SPORTS_TABLE)
-STYLEPULSE_TABLE = os.getenv("STYLEPULSE_TABLE", TABLE_NAME)
-WAFAQ_TABLE = os.getenv("WAFAQ_TABLE", TABLE_NAME)
+# Individual table constants for scrapers importing them directly
+BUSINESS_TABLE = TABLES["business"]
+SPORTS_TABLE = TABLES["sports"]
+FASHION_TABLE = TABLES["fashion"]
+HOUSTONPULSE_TABLE = TABLES["houstonpulse"]
+MERAMURREE_TABLE = TABLES["meramurree"]
+WAFAQ_TABLE = TABLES["wafaq"]
+ENTERTAINMENT_TABLE = TABLES["entertainment"]
 
 
 # ==============================================================================
-# 3. SUPABASE DATABASE CREDENTIALS BY SYSTEM / CATEGORY
+# 2. SUPABASE DATABASE CREDENTIALS BY SYSTEM
 # ==============================================================================
+
+# Business / MediaNest Database
+SUPABASE_MEDIANEST_URL = os.getenv("SUPABASE_MEDIANEST_URL", "")
+SUPABASE_MEDIANEST_KEY = os.getenv("SUPABASE_MEDIANEST_KEY", "")
+
+# Sports Database
+SUPABASE_SPORTS_URL = os.getenv("SUPABASE_SPORTS_URL", "")
+SUPABASE_SPORTS_KEY = os.getenv("SUPABASE_SPORTS_KEY", "")
 
 # Fashion Database
 SUPABASE_FASHION_URL = os.getenv("SUPABASE_FASHION_URL", "")
 SUPABASE_FASHION_KEY = os.getenv("SUPABASE_FASHION_KEY", "")
 
-# Sports Database (SportifyHub)
-SUPABASE_SPORTS_URL = os.getenv(
-    "SUPABASE_SPORTS_URL", os.getenv("SUPABASE_SPORTIFYHUB_URL", "")
-)
-SUPABASE_SPORTS_KEY = os.getenv(
-    "SUPABASE_SPORTS_KEY", os.getenv("SUPABASE_SPORTIFYHUB_KEY", "")
-)
-
-# Microservice Endpoints
-SUPABASE_FASHIONHUB_URL = os.getenv("SUPABASE_FASHIONHUB_URL", "")
-SUPABASE_FASHIONHUB_KEY = os.getenv("SUPABASE_FASHIONHUB_KEY", "")
-
+# HoustonPulse Database
 SUPABASE_HOUSTONPULSE_URL = os.getenv("SUPABASE_HOUSTONPULSE_URL", "")
 SUPABASE_HOUSTONPULSE_KEY = os.getenv("SUPABASE_HOUSTONPULSE_KEY", "")
 
-SUPABASE_MEDIANEST_URL = os.getenv("SUPABASE_MEDIANEST_URL", "")
-SUPABASE_MEDIANEST_KEY = os.getenv("SUPABASE_MEDIANEST_KEY", "")
-
-SUPABASE_MEDIANESTDEV_URL = os.getenv("SUPABASE_MEDIANESTDEV_URL", "")
-SUPABASE_MEDIANESTDEV_KEY = os.getenv("SUPABASE_MEDIANESTDEV_KEY", "")
-
+# MeraMurree Database
 SUPABASE_MERAMURREE_URL = os.getenv("SUPABASE_MERAMURREE_URL", "")
 SUPABASE_MERAMURREE_KEY = os.getenv("SUPABASE_MERAMURREE_KEY", "")
 
-SUPABASE_MERAPESHAWAR_URL = os.getenv("SUPABASE_MERAPESHAWAR_URL", "")
-SUPABASE_MERAPESHAWAR_KEY = os.getenv("SUPABASE_MERAPESHAWAR_KEY", "")
-
-SUPABASE_SPORTIFYHUB_URL = os.getenv("SUPABASE_SPORTIFYHUB_URL", "")
-SUPABASE_SPORTIFYHUB_KEY = os.getenv("SUPABASE_SPORTIFYHUB_KEY", "")
-
-SUPABASE_STYLEPULSE_URL = os.getenv("SUPABASE_STYLEPULSE_URL", "")
-SUPABASE_STYLEPULSE_KEY = os.getenv("SUPABASE_STYLEPULSE_KEY", "")
-
+# Wafaq Database
 SUPABASE_WAFAQ_URL = os.getenv("SUPABASE_WAFAQ_URL", "")
 SUPABASE_WAFAQ_KEY = os.getenv("SUPABASE_WAFAQ_KEY", "")
 
 
 # ==============================================================================
-# 4. APPLICATION & SERVER CONFIGURATION
+# 3. APPLICATION & SERVER CONFIGURATION
 # ==============================================================================
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")

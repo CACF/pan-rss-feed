@@ -13,16 +13,11 @@ Safety guarantees:
 
 import logging
 from app.utils.supabase_client import (
-    supabase,
+    business_supabase,
+    sports_supabase,
     fashion_supabase,
-    fashionhub_supabase,
     houstonpulse_supabase,
-    medianest_supabase,
-    medianestdev_supabase,
     meramurree_supabase,
-    merapeshawar_supabase,
-    sportifyhub_supabase,
-    stylepulse_supabase,
     wafaq_supabase,
 )
 
@@ -36,16 +31,11 @@ logger = logging.getLogger(__name__)
 
 # List of all configured Supabase clients with human-readable names
 TARGET_DATABASES = [
-    ("Main / Business", supabase),
+    ("Business / MediaNest", business_supabase),
+    ("Sports", sports_supabase),
     ("Fashion", fashion_supabase),
-    ("FashionHub", fashionhub_supabase),
     ("HoustonPulse", houstonpulse_supabase),
-    ("MediaNest", medianest_supabase),
-    ("MediaNestDev", medianestdev_supabase),
     ("MeraMurree", meramurree_supabase),
-    ("MeraPeshawar", merapeshawar_supabase),
-    ("SportifyHub", sportifyhub_supabase),
-    ("StylePulse", stylepulse_supabase),
     ("Wafaq", wafaq_supabase),
 ]
 
@@ -61,7 +51,7 @@ def clean_test_tables():
     print(f"Total Database Clients: {len(TARGET_DATABASES)}")
     print("-" * 80)
 
-    # Deduplicate clients by URL if fallback clients map to main instance
+    # Deduplicate clients by URL if fallback instances map to main instance
     seen_urls = set()
     unique_dbs = []
     for db_name, client in TARGET_DATABASES:
@@ -99,7 +89,7 @@ def clean_test_tables():
                     else 0
                 )
                 logger.info(
-                    f"[{db_name:15s}] Successfully cleared table '{table_name}' | Rows deleted: {deleted_count}"
+                    f"[{db_name:20s}] Successfully cleared table '{table_name}' | Rows deleted: {deleted_count}"
                 )
                 summary.append(
                     {
@@ -119,11 +109,11 @@ def clean_test_tables():
                     or "Could not find the table" in err_msg
                 ):
                     logger.debug(
-                        f"[{db_name:15s}] Table '{table_name}' does not exist on this database."
+                        f"[{db_name:20s}] Table '{table_name}' does not exist on this database."
                     )
                 else:
                     logger.warning(
-                        f"[{db_name:15s}] Failed to clear '{table_name}': {err_msg}"
+                        f"[{db_name:20s}] Failed to clear '{table_name}': {err_msg}"
                     )
                     summary.append(
                         {
@@ -136,7 +126,7 @@ def clean_test_tables():
 
         if not cleared_any:
             logger.info(
-                f"[{db_name:15s}] No test tables ('test_news' / 'news_test') found or modified."
+                f"[{db_name:20s}] No test tables ('test_news' / 'news_test') found or modified."
             )
 
     print("=" * 80)
@@ -145,11 +135,11 @@ def clean_test_tables():
     for item in summary:
         if item["status"] == "SUCCESS":
             print(
-                f" [OK]   {item['database']:15s} | Table: {item['table']:12s} | Status: SUCCESS | Deleted Rows: {item['rows_deleted']}"
+                f" [OK]   {item['database']:20s} | Table: {item['table']:12s} | Status: SUCCESS | Deleted Rows: {item['rows_deleted']}"
             )
         else:
             print(
-                f" [FAIL] {item['database']:15s} | Table: {item['table']:12s} | Status: FAILED  | Error: {item.get('error')}"
+                f" [FAIL] {item['database']:20s} | Table: {item['table']:12s} | Status: FAILED  | Error: {item.get('error')}"
             )
     print("=" * 80)
     print("Cleanup completed safely.")
