@@ -7,7 +7,7 @@ load_dotenv()
 # 1. DATABASE TABLE MODE SWITCHER (SINGLE SOURCE OF TRUTH)
 # ==============================================================================
 # Change TABLE_PREFIX to "news" for production mode, or "news_test" for testing mode.
-TABLE_PREFIX = "news_test"
+TABLE_PREFIX = "news"
 
 # Explicit table mapping for each category / system
 TABLES = {
