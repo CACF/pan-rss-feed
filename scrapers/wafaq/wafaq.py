@@ -13,180 +13,38 @@ from urllib.parse import urlparse
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
+from .site_cleanup import SITE_CLEANUP_SELECTORS
+from .skip_domains import SKIP_DOMAINS
+from .keywords import ISLAMABAD_KEYWORDS
+
 logger = logging.getLogger(__name__)
 
 
 class IslamabadRSSPipeline:
-    """
-    Targeted News Pipeline for Islamabad
-    """
 
     SOURCE = "Rss Feeds"
-
-    MAX_WORKERS = 15
+    MAX_WORKERS = 20
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=CDA+Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Islamabad+Police+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Islamabad+Traffic+Police+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=ICT+Administration+Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Islamabad+events+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Islamabad+rain+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
+        "https://news.google.com/rss/search?q=Margalla+Hills+Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
     ]
 
     GENERAL_NATIONAL_FEEDS = [
         "https://tribune.com.pk/feed/homepage",
-        "https://www.dawn.com/feeds/home",
         "https://www.thenews.com.pk/rss/1/1",
+        "https://dailytimes.com.pk/feed/",
     ]
 
-    ISLAMABAD_KEYWORDS = [
-        # General
-        "islamabad",
-        "ict",
-        "islamabad capital territory",
-        "federal capital",
-        "capital city",
-        # CDA / Government
-        "cda",
-        "capital development authority",
-        "capital development authority islamabad",
-        "pak secretariat",
-        "cabinet division",
-        "foreign office",
-        "parliament house",
-        "president house",
-        "prime minister house",
-        "constitution avenue",
-        # Police & Administration
-        "islamabad police",
-        "islamabad capital police",
-        "ict police",
-        "district administration islamabad",
-        "deputy commissioner islamabad",
-        "dc islamabad",
-        "assistant commissioner islamabad",
-        # Courts
-        "islamabad high court",
-        "ihc",
-        "supreme court",
-        # Roads
-        "jinnah avenue",
-        "constitution avenue",
-        "srinagar highway",
-        "kashmir highway",
-        "islamabad expressway",
-        "margalla avenue",
-        # Sectors
-        "f-5",
-        "f-6",
-        "f-7",
-        "f-8",
-        "f-9",
-        "f-10",
-        "f-11",
-        "f-12",
-        "g-5",
-        "g-6",
-        "g-7",
-        "g-8",
-        "g-9",
-        "g-10",
-        "g-11",
-        "g-12",
-        "g-13",
-        "i-8",
-        "i-9",
-        "i-10",
-        "i-11",
-        "d-12",
-        "e-7",
-        "e-8",
-        "e-9",
-        "e-11",
-        "c-13",
-        # Areas
-        "bhara kahu",
-        "bara kahu",
-        "nilore",
-        "tramri",
-        "golra",
-        "tarnol",
-        "sangjani",
-        "rawat",
-        "kirpa",
-        "lehtrar",
-        "chak shahzad",
-        # Housing Societies
-        "dha islamabad",
-        "bahria town islamabad",
-        "pwd",
-        "gulberg greens",
-        "gulberg residences",
-        "naval anchorage",
-        # Famous Places
-        "blue area",
-        "red zone",
-        "centaurus",
-        "faisal mosque",
-        "pakistan monument",
-        "lok virsa",
-        "diplomatic enclave",
-        "serena hotel",
-        # Tourist Attractions
-        "margalla hills",
-        "margalla hills national park",
-        "pir sohawa",
-        "daman-e-koh",
-        "shakarparian",
-        "saidpur village",
-        "bari imam",
-        # Airport
-        "islamabad international airport",
-        "new islamabad airport",
-        # Hospitals
-        "pims",
-        "pakistan institute of medical sciences",
-        "polyclinic hospital",
-        "federal general hospital",
-        "shifa international hospital",
-        # Universities
-        "nust",
-        "national university of sciences and technology",
-        "comsats islamabad",
-        "international islamic university",
-        "iiui",
-        "air university",
-        "numl",
-        "quaid-i-azam university",
-        # Metro
-        "metro bus",
-        "metro station",
-        # Parks
-        "fatima jinnah park",
-        "f-9 park",
-        "lake view park",
-        "rose and jasmine garden",
-        # Religious Places
-        "faisal mosque",
-        "bari imam",
-        # Common References
-        "twin cities",
-    ]
-
-    SKIP_DOMAINS = {
-        "malaysiasun.com",
-        "www.malaysiasun.com",
-        "app.com.pk",
-        "www.app.com.pk",
-        "voicepk.net",
-        "www.voicepk.net",
-        "balochistanpulse.com",
-        "www.balochistanpulse.com",
-        "ndtv.com",
-        "www.ndtv.com",
-        "thestatesman.com",
-        "www.thestatesman.com",
-        "newsonair.gov.in",
-        "www.newsonair.gov.in",
-        "cricinfo.com",
-        "www.cricinfo.com",
-    }
+    islamababad_keywords = ISLAMABAD_KEYWORDS
+    # AMBIGUOUS_ISLAMABAD_KEYWORDS = AMBIGUOUS_ISLAMABAD_KEYWORDS
+    skiped_domains = SKIP_DOMAINS
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -198,6 +56,18 @@ class IslamabadRSSPipeline:
         ("meta", {"name": "sailthru.date"}),
         ("meta", {"itemprop": "datePublished"}),
     ]
+
+    @staticmethod
+    def _compile_keyword_pattern(keywords):
+        return re.compile(
+            r"(?<!\w)(" + "|".join(re.escape(kw) for kw in keywords) + r")(?!\w)",
+            re.IGNORECASE,
+        )
+
+    @staticmethod
+    def is_islamabad_related(text):
+        lower = text.lower()
+        return any(kw in lower for kw in IslamabadRSSPipeline.islamababad_keywords)
 
     @staticmethod
     def parse_date(date_str):
@@ -284,70 +154,10 @@ class IslamabadRSSPipeline:
     def site_specific_cleanup(container, domain):
         selectors = []
 
-        if "app.com.pk" in domain:
-            selectors = [
-                ".jeg_share_button",
-                ".jeg_meta_container",
-                ".jeg_post_tags",
-                ".jeg_postblock",
-                ".jeg_ad",
-                ".jeg_sidebar",
-                ".sharedaddy",
-                ".author-box",
-            ]
-
-        elif "urdupoint.com" in domain:
-            selectors = [
-                ".news-author",
-                ".news-date",
-                ".social-icons",
-                ".related-news",
-                ".sidebar",
-                ".tags",
-                ".ads",
-                "i[aria-label='Published Time']",
-            ]
-
-        elif "tribune.com.pk" in domain:
-            selectors = [
-                ".story__meta",
-                ".story__sidebar",
-                ".story__tags",
-                ".story__related",
-                ".sidebar",
-                ".advertisement",
-            ]
-
-        elif "dawn.com" in domain:
-            selectors = [
-                ".story__meta",
-                ".story__sidebar",
-                ".story__tags",
-                ".story__related",
-                ".sidebar",
-                ".advertisement",
-            ]
-
-        elif "thenews.com.pk" in domain:
-            selectors = [
-                ".newsauthor",
-                ".newsdate",
-                ".relatednews",
-                ".tags",
-                ".advertisement",
-                ".sidebar",
-            ]
-
-        elif "nation.com.pk" in domain:
-            selectors = [
-                ".author-box",
-                ".post-meta",
-                ".post-tags",
-                ".social-share",
-                ".related-posts",
-                ".advertisement",
-                ".sidebar",
-            ]
+        for site, site_selectors in SITE_CLEANUP_SELECTORS.items():
+            if site in domain:
+                selectors = site_selectors
+                break
 
         for selector in selectors:
             for tag in container.select(selector):
@@ -497,11 +307,6 @@ class IslamabadRSSPipeline:
         return None
 
     @staticmethod
-    def is_islamabad_related(text):
-        lower = text.lower()
-        return any(kw in lower for kw in IslamabadRSSPipeline.ISLAMABAD_KEYWORDS)
-
-    @staticmethod
     def resolve_google_news_link(google_url):
         if not google_url:
             return None
@@ -568,6 +373,13 @@ class IslamabadRSSPipeline:
                     for p in container.find_all("p"):
                         text = IslamabadRSSPipeline.clean_text(str(p))
                         text = IslamabadRSSPipeline.clean_article_text(text)
+                        if "dailytimes.com.pk" in domain:
+                            text = re.sub(
+                                r"^Published\s+on:.*?(?=[A-Z])",
+                                "",
+                                text,
+                                flags=re.IGNORECASE,
+                            )
 
                         if len(text) < 30:
                             continue
@@ -596,13 +408,6 @@ class IslamabadRSSPipeline:
 
     @staticmethod
     def process_item(item, is_google_news, apply_islamabad_filter, feed_build_date):
-        """
-        Process a single <item> from an RSS feed into an article dict (or None
-        if it should be skipped). This does the network-bound work (Google
-        News link resolution + full article fetch), so it's designed to be
-        safely called from a worker thread: it only touches its own local
-        variables and the immutable/read-only class data, never shared state.
-        """
         try:
             title_elem = item.find("title")
             link_elem = item.find("link")
@@ -636,7 +441,7 @@ class IslamabadRSSPipeline:
                 link = raw_link
 
             domain = urlparse(link).netloc.lower()
-            if domain in IslamabadRSSPipeline.SKIP_DOMAINS:
+            if domain in IslamabadRSSPipeline.skiped_domains:
                 logger.info(f"Skipping article from {domain}: '{title}'")
                 return None
 
@@ -739,11 +544,6 @@ class IslamabadRSSPipeline:
             feed_build_date = datetime.now(timezone.utc)
             articles = []
 
-            # Each item requires its own network round-trip(s) (Google News
-            # decode + full article fetch), so this is I/O bound work — a
-            # thread pool gives a real speedup here without the complexity
-            # of multiprocessing, since threads release the GIL while
-            # waiting on network calls.
             with ThreadPoolExecutor(
                 max_workers=IslamabadRSSPipeline.MAX_WORKERS
             ) as executor:
