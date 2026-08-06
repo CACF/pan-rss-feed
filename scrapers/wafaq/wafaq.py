@@ -39,7 +39,6 @@ class IslamabadRSSPipeline:
     GENERAL_NATIONAL_FEEDS = [
         "https://tribune.com.pk/feed/homepage",
         "https://www.thenews.com.pk/rss/1/1",
-        "https://dailytimes.com.pk/feed/",
     ]
 
     ISLAMABAD_KEYWORDS = ISLAMABAD_KEYWORDS
