@@ -42,9 +42,12 @@ class IslamabadRSSPipeline:
         "https://dailytimes.com.pk/feed/",
     ]
 
-    islamababad_keywords = ISLAMABAD_KEYWORDS
-    # AMBIGUOUS_ISLAMABAD_KEYWORDS = AMBIGUOUS_ISLAMABAD_KEYWORDS
-    skiped_domains = SKIP_DOMAINS
+    ISLAMABAD_KEYWORDS = ISLAMABAD_KEYWORDS
+    islamabad_keywords = ISLAMABAD_KEYWORDS
+    islamababad_keywords = ISLAMABAD_KEYWORDS  # backward compatibility alias
+    SKIP_DOMAINS = SKIP_DOMAINS
+    skip_domains = SKIP_DOMAINS
+    skiped_domains = SKIP_DOMAINS  # backward compatibility alias
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -67,7 +70,7 @@ class IslamabadRSSPipeline:
     @staticmethod
     def is_islamabad_related(text):
         lower = text.lower()
-        return any(kw in lower for kw in IslamabadRSSPipeline.islamababad_keywords)
+        return any(kw in lower for kw in IslamabadRSSPipeline.islamabad_keywords)
 
     @staticmethod
     def parse_date(date_str):
@@ -441,7 +444,7 @@ class IslamabadRSSPipeline:
                 link = raw_link
 
             domain = urlparse(link).netloc.lower()
-            if domain in IslamabadRSSPipeline.skiped_domains:
+            if domain in IslamabadRSSPipeline.skip_domains:
                 logger.info(f"Skipping article from {domain}: '{title}'")
                 return None
 

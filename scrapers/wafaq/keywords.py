@@ -144,8 +144,7 @@ ISLAMABAD_KEYWORDS = [
     "marriott islamabad",
     "hotel margala",
     "safa gold mall",
-    # ]
-    # AMBIGUOUS_ISLAMABAD_KEYWORDS = [
+    # Short/Sectors/Acronyms
     "ict",
     "cda",
     "ecp",
