@@ -18,6 +18,7 @@ TABLES = {
     "meramurree": f"{TABLE_PREFIX}",
     "wafaq": f"{TABLE_PREFIX}",
     "entertainment": f"{TABLE_PREFIX}",
+    "merapeshawar": f"{TABLE_PREFIX}",
 }
 
 # Individual table constants for scrapers importing them directly
@@ -28,6 +29,7 @@ HOUSTONPULSE_TABLE = TABLES["houstonpulse"]
 MERAMURREE_TABLE = TABLES["meramurree"]
 WAFAQ_TABLE = TABLES["wafaq"]
 ENTERTAINMENT_TABLE = TABLES["entertainment"]
+MERAPESHAWAR_TABLE = TABLES["merapeshawar"]
 
 
 # ==============================================================================
@@ -58,6 +60,9 @@ SUPABASE_MERAMURREE_KEY = os.getenv("SUPABASE_MERAMURREE_KEY", "")
 SUPABASE_WAFAQ_URL = os.getenv("SUPABASE_WAFAQ_URL", "")
 SUPABASE_WAFAQ_KEY = os.getenv("SUPABASE_WAFAQ_KEY", "")
 
+# Mera-Peshawar Database
+SUPABASE_MERAPESHAWAR_URL = os.getenv("SUPABASE_MERAPESHAWAR_URL", "")
+SUPABASE_MERAPESHAWAR_KEY = os.getenv("SUPABASE_MERAPESHAWAR_KEY", "")
 
 # ==============================================================================
 # 3. APPLICATION & SERVER CONFIGURATION
