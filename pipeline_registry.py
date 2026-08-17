@@ -12,6 +12,7 @@ from scrapers.entertainment.pipeline import EntertainmentPipeline
 from scrapers.wafaq.pipeline import WafaqPipeline
 from scrapers.meramuree.pipeline import MeraMurreePipeline
 from scrapers.houstonpulse.pipeline import HoustonPulsePipeline
+from scrapers.merapeshawar.pipeline import MeraPeshawarPipeline
 
 PIPELINES = [
     BusinessPipeline,
@@ -20,5 +21,6 @@ PIPELINES = [
     WafaqPipeline,
     MeraMurreePipeline,
     HoustonPulsePipeline,
-    # EntertainmentPipeline,
+    EntertainmentPipeline,
+    MeraPeshawarPipeline,
 ]

@@ -51,6 +51,9 @@ wafaq_supabase = create_supabase_client(
     config.SUPABASE_WAFAQ_URL, config.SUPABASE_WAFAQ_KEY
 )
 
+merapeshawar_supabase = create_supabase_client(
+    config.SUPABASE_MERAPESHAWAR_URL, config.SUPABASE_MERAPESHAWAR_KEY
+)
 
 # Explicit System mapping for clients and tables
 SYSTEM_CLIENTS = {
@@ -66,6 +69,10 @@ SYSTEM_CLIENTS = {
     "meramuree": {"client": meramurree_supabase, "table": config.MERAMURREE_TABLE},
     "wafaq": {"client": wafaq_supabase, "table": config.WAFAQ_TABLE},
     "entertainment": {"client": business_supabase, "table": config.ENTERTAINMENT_TABLE},
+    "merapeshawar": {
+        "client": merapeshawar_supabase,
+        "table": config.MERAPESHAWAR_TABLE,
+    },
 }
 SYSTEM_CLIENT_MAP = SYSTEM_CLIENTS  # Alias for backward compatibility if needed
 
