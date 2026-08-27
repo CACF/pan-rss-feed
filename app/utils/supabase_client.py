@@ -55,6 +55,10 @@ merapeshawar_supabase = create_supabase_client(
     config.SUPABASE_MERAPESHAWAR_URL, config.SUPABASE_MERAPESHAWAR_KEY
 )
 
+karachi_supabase = create_supabase_client(
+    config.SUPABASE_KARACHI_URL, config.SUPABASE_KARACHI_KEY
+)
+
 # Explicit System mapping for clients and tables
 SYSTEM_CLIENTS = {
     "business": {"client": business_supabase, "table": config.BUSINESS_TABLE},
@@ -73,6 +77,7 @@ SYSTEM_CLIENTS = {
         "client": merapeshawar_supabase,
         "table": config.MERAPESHAWAR_TABLE,
     },
+    "karachi": {"client": karachi_supabase, "table": config.KARACHI_TABLE},
 }
 SYSTEM_CLIENT_MAP = SYSTEM_CLIENTS  # Alias for backward compatibility if needed
 

@@ -13,14 +13,16 @@ from scrapers.wafaq.pipeline import WafaqPipeline
 from scrapers.meramuree.pipeline import MeraMurreePipeline
 from scrapers.houstonpulse.pipeline import HoustonPulsePipeline
 from scrapers.merapeshawar.pipeline import MeraPeshawarPipeline
+from scrapers.karachi.pipeline import KarachiPipeline
 
 PIPELINES = [
-    BusinessPipeline,
-    SportsPipeline,
-    FashionPipeline,
-    WafaqPipeline,
-    MeraMurreePipeline,
-    HoustonPulsePipeline,
-    EntertainmentPipeline,
-    MeraPeshawarPipeline,
+    # BusinessPipeline,
+    # SportsPipeline,
+    # FashionPipeline,
+    # WafaqPipeline,
+    # MeraMurreePipeline,
+    # HoustonPulsePipeline,
+    # EntertainmentPipeline,
+    # MeraPeshawarPipeline,
+    KarachiPipeline
 ]
