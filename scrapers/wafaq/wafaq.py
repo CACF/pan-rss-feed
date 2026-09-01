@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class IslamabadRSSPipeline:
 
     SOURCE = "Rss Feeds"
-    MAX_WORKERS = 20
+    MAX_WORKERS = 30
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
@@ -41,12 +41,44 @@ class IslamabadRSSPipeline:
         "https://www.thenews.com.pk/rss/1/1",
     ]
 
-    ISLAMABAD_KEYWORDS = ISLAMABAD_KEYWORDS
+    EMBASSY_NEWS_FEEDS = [
+        "https://news.google.com/rss/search?q=%22U.S.+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United States
+        "https://news.google.com/rss/search?q=%22British+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United Kingdom
+        "https://news.google.com/rss/search?q=%22Chinese+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # China
+        "https://news.google.com/rss/search?q=%22Japanese+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Japan
+        "https://news.google.com/rss/search?q=%22German+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Germany
+        "https://news.google.com/rss/search?q=%22French+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # France
+        "https://news.google.com/rss/search?q=%22EU+Delegation%22+Pakistan+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # European Union
+        "https://news.google.com/rss/search?q=%22Canadian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Canada
+        "https://news.google.com/rss/search?q=%22Australian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Australia
+        "https://news.google.com/rss/search?q=%22Turkish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Türkiye
+        "https://news.google.com/rss/search?q=%22Saudi+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Saudi Arabia
+        "https://news.google.com/rss/search?q=%22UAE+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United Arab Emirates
+        "https://news.google.com/rss/search?q=%22Qatari+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Qatar
+        "https://news.google.com/rss/search?q=%22Iranian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Iran
+        "https://news.google.com/rss/search?q=%22Korean+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # South Korea
+        "https://news.google.com/rss/search?q=%22Indonesian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Indonesia
+        "https://news.google.com/rss/search?q=%22Malaysian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Malaysia
+        "https://news.google.com/rss/search?q=%22Thai+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Thailand
+        "https://news.google.com/rss/search?q=%22Danish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Denmark
+        "https://news.google.com/rss/search?q=%22Swedish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Sweden
+        "https://news.google.com/rss/search?q=%22Norwegian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Norway
+        "https://news.google.com/rss/search?q=%22Swiss+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Switzerland
+        "https://news.google.com/rss/search?q=%22Dutch+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Netherlands
+        "https://news.google.com/rss/search?q=%22Finnish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Finland
+        "https://news.google.com/rss/search?q=%22Polish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Poland
+        "https://news.google.com/rss/search?q=%22Austrian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Austria
+        "https://news.google.com/rss/search?q=%22Belgian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Belgium
+        "https://news.google.com/rss/search?q=%22Czech+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Czech Republic
+        "https://news.google.com/rss/search?q=%22Hungarian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Hungary
+        "https://news.google.com/rss/search?q=%22Irish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Ireland
+        "https://news.google.com/rss/search?q=%22Greek+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Greece
+        "https://news.google.com/rss/search?q=%22Romanian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Romania
+        "https://news.google.com/rss/search?q=%22Italian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Italy
+    ]
+
     islamabad_keywords = ISLAMABAD_KEYWORDS
-    islamababad_keywords = ISLAMABAD_KEYWORDS  # backward compatibility alias
-    SKIP_DOMAINS = SKIP_DOMAINS
     skip_domains = SKIP_DOMAINS
-    skiped_domains = SKIP_DOMAINS  # backward compatibility alias
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -409,7 +441,13 @@ class IslamabadRSSPipeline:
         return result
 
     @staticmethod
-    def process_item(item, is_google_news, apply_islamabad_filter, feed_build_date):
+    def process_item(
+        item,
+        is_google_news,
+        apply_islamabad_filter,
+        feed_build_date,
+        is_embassy_feed=False,
+    ):
         try:
             title_elem = item.find("title")
             link_elem = item.find("link")
@@ -504,7 +542,7 @@ class IslamabadRSSPipeline:
                 "image": image_url,
                 "source": source,
                 "content": content,
-                "genre": "General News",
+                "genre": "Embassy News" if is_embassy_feed else "General News",
                 "media_origin": "local",
                 "tags": categories,
             }
@@ -527,6 +565,7 @@ class IslamabadRSSPipeline:
         feed_url,
         is_google_news,
         apply_islamabad_filter=True,
+        is_embassy_feed=False,
     ):
         try:
             logger.info(f"Fetching RSS: {feed_url}")
@@ -556,6 +595,7 @@ class IslamabadRSSPipeline:
                         is_google_news,
                         apply_islamabad_filter,
                         feed_build_date,
+                        is_embassy_feed,
                     )
                     for item in items
                 ]
@@ -600,6 +640,17 @@ class IslamabadRSSPipeline:
                         feed_url,
                         is_google_news=False,
                         apply_islamabad_filter=True,
+                    )
+                )
+
+            logger.info("── Islamabad, Pakistan — Embassy  Feeds ──")
+            for feed_url in IslamabadRSSPipeline.EMBASSY_NEWS_FEEDS:
+                all_articles.extend(
+                    IslamabadRSSPipeline.fetch_rss_feed(
+                        feed_url,
+                        is_google_news=True,
+                        apply_islamabad_filter=False,
+                        is_embassy_feed=True,
                     )
                 )
 
