@@ -13,6 +13,9 @@ from scrapers.fashion.tribune_fashion import ExpressTribuneFashionRSSPipeline
 from scrapers.fashion.divaonline import DivaFashionRSSPipeline
 from scrapers.fashion.hmagpak import HMagFashionPipeline
 from scrapers.fashion.wwd import WWDRSSPipeline
+from scrapers.fashion.claire_fashion import MarieClaireFashionRSSPipeline
+from scrapers.fashion.sunday_fashion import SundayFashionRSSPipeline
+from scrapers.fashion.whowearwhat import WhoWhatWearFashionRSSPipeline
 
 SCRAPERS = [
     GlamFashionRSSPipeline,
@@ -23,4 +26,7 @@ SCRAPERS = [
     DivaFashionRSSPipeline,
     HMagFashionPipeline,
     WWDRSSPipeline,
+    MarieClaireFashionRSSPipeline,
+    SundayFashionRSSPipeline,
+    WhoWhatWearFashionRSSPipeline
 ]
