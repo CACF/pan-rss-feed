@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class IslamabadRSSPipeline:
 
     SOURCE = "Rss Feeds"
-    MAX_WORKERS = 30
+    MAX_WORKERS = 8
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",

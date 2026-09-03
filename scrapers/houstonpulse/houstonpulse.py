@@ -21,7 +21,7 @@ class HoustonPulseRSSPipeline:
     """
 
     SOURCE = "Google News"
-    MAX_WORKERS = 30
+    MAX_WORKERS = 8
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Pakistani+community+Houston+when:7d&hl=en-US&gl=US&ceid=US:en",

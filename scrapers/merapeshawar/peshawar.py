@@ -23,7 +23,7 @@ class PeshawarRSSPipeline:
     """
 
     SOURCE = "Google News"
-    MAX_WORKERS = 20
+    MAX_WORKERS = 8
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Peshawara+when:7d&hl=en-PK&gl=PK&ceid=PK:en",  # Peshawar
