@@ -50,7 +50,7 @@ SCRAPERS = [
     ARYNewsBusinessRSSPipeline,
     BloombergRSSPipeline,
     BBCRSSPipeline,
-    BusinessRecorderRSSPipeline,
+    # BusinessRecorderRSSPipeline,
     CNBCRSSPipeline,
     DawnRSSPipeline,
     DailyPakistanBusinessRSSPipeline,

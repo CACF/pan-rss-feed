@@ -27,6 +27,6 @@ SCRAPERS = [
     HMagFashionPipeline,
     WWDRSSPipeline,
     MarieClaireFashionRSSPipeline,
-    SundayFashionRSSPipeline,
+    # SundayFashionRSSPipeline,
     WhoWhatWearFashionRSSPipeline
 ]
