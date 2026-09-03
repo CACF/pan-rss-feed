@@ -42,39 +42,39 @@ class IslamabadRSSPipeline:
     ]
 
     EMBASSY_NEWS_FEEDS = [
-        # "https://news.google.com/rss/search?q=%22U.S.+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United States
-        # "https://news.google.com/rss/search?q=%22British+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United Kingdom
-        # "https://news.google.com/rss/search?q=%22Chinese+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # China
-        # "https://news.google.com/rss/search?q=%22Japanese+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Japan
-        # "https://news.google.com/rss/search?q=%22German+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Germany
-        # "https://news.google.com/rss/search?q=%22French+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # France
-        # "https://news.google.com/rss/search?q=%22EU+Delegation%22+Pakistan+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # European Union
-        # "https://news.google.com/rss/search?q=%22Canadian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Canada
-        # "https://news.google.com/rss/search?q=%22Australian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Australia
-        # "https://news.google.com/rss/search?q=%22Turkish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Türkiye
-        # "https://news.google.com/rss/search?q=%22Saudi+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Saudi Arabia
-        # "https://news.google.com/rss/search?q=%22UAE+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United Arab Emirates
-        # "https://news.google.com/rss/search?q=%22Qatari+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Qatar
-        # "https://news.google.com/rss/search?q=%22Iranian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Iran
-        # "https://news.google.com/rss/search?q=%22Korean+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # South Korea
-        # "https://news.google.com/rss/search?q=%22Indonesian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Indonesia
-        # "https://news.google.com/rss/search?q=%22Malaysian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Malaysia
-        # "https://news.google.com/rss/search?q=%22Thai+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Thailand
-        # "https://news.google.com/rss/search?q=%22Danish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Denmark
-        # "https://news.google.com/rss/search?q=%22Swedish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Sweden
-        # "https://news.google.com/rss/search?q=%22Norwegian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Norway
-        # "https://news.google.com/rss/search?q=%22Swiss+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Switzerland
-        # "https://news.google.com/rss/search?q=%22Dutch+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Netherlands
-        # "https://news.google.com/rss/search?q=%22Finnish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Finland
-        # "https://news.google.com/rss/search?q=%22Polish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Poland
-        # "https://news.google.com/rss/search?q=%22Austrian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Austria
-        # "https://news.google.com/rss/search?q=%22Belgian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Belgium
-        # "https://news.google.com/rss/search?q=%22Czech+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Czech Republic
-        # "https://news.google.com/rss/search?q=%22Hungarian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Hungary
-        # "https://news.google.com/rss/search?q=%22Irish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Ireland
-        # "https://news.google.com/rss/search?q=%22Greek+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Greece
-        # "https://news.google.com/rss/search?q=%22Romanian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Romania
-        # "https://news.google.com/rss/search?q=%22Italian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Italy
+        "https://news.google.com/rss/search?q=%22U.S.+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United States
+        "https://news.google.com/rss/search?q=%22British+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United Kingdom
+        "https://news.google.com/rss/search?q=%22Chinese+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # China
+        "https://news.google.com/rss/search?q=%22Japanese+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Japan
+        "https://news.google.com/rss/search?q=%22German+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Germany
+        "https://news.google.com/rss/search?q=%22French+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # France
+        "https://news.google.com/rss/search?q=%22EU+Delegation%22+Pakistan+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # European Union
+        "https://news.google.com/rss/search?q=%22Canadian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Canada
+        "https://news.google.com/rss/search?q=%22Australian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Australia
+        "https://news.google.com/rss/search?q=%22Turkish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Türkiye
+        "https://news.google.com/rss/search?q=%22Saudi+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Saudi Arabia
+        "https://news.google.com/rss/search?q=%22UAE+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # United Arab Emirates
+        "https://news.google.com/rss/search?q=%22Qatari+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Qatar
+        "https://news.google.com/rss/search?q=%22Iranian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Iran
+        "https://news.google.com/rss/search?q=%22Korean+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # South Korea
+        "https://news.google.com/rss/search?q=%22Indonesian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Indonesia
+        "https://news.google.com/rss/search?q=%22Malaysian+High+Commission%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Malaysia
+        "https://news.google.com/rss/search?q=%22Thai+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Thailand
+        "https://news.google.com/rss/search?q=%22Danish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Denmark
+        "https://news.google.com/rss/search?q=%22Swedish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Sweden
+        "https://news.google.com/rss/search?q=%22Norwegian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Norway
+        "https://news.google.com/rss/search?q=%22Swiss+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Switzerland
+        "https://news.google.com/rss/search?q=%22Dutch+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Netherlands
+        "https://news.google.com/rss/search?q=%22Finnish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Finland
+        "https://news.google.com/rss/search?q=%22Polish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Poland
+        "https://news.google.com/rss/search?q=%22Austrian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Austria
+        "https://news.google.com/rss/search?q=%22Belgian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Belgium
+        "https://news.google.com/rss/search?q=%22Czech+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Czech Republic
+        "https://news.google.com/rss/search?q=%22Hungarian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Hungary
+        "https://news.google.com/rss/search?q=%22Irish+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Ireland
+        "https://news.google.com/rss/search?q=%22Greek+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Greece
+        "https://news.google.com/rss/search?q=%22Romanian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Romania
+        "https://news.google.com/rss/search?q=%22Italian+Embassy%22+Islamabad+when%3A7d&hl=en-PK&gl=PK&ceid=PK:en",  # Italy
     ]
 
     islamabad_keywords = ISLAMABAD_KEYWORDS
