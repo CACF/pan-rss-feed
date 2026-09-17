@@ -16,6 +16,7 @@ from app.utils.supabase_client import SupabaseClient
 from .site_cleanup import SITE_CLEANUP_SELECTORS
 from .skip_domains import SKIP_DOMAINS
 from .keywords import ISLAMABAD_KEYWORDS
+from .keywords import EMBASSY_KEYWORDS
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 class IslamabadRSSPipeline:
 
     SOURCE = "Rss Feeds"
-    MAX_WORKERS = 8
+    MAX_WORKERS = 12
 
     GOOGLE_NEWS_FEEDS = [
         "https://news.google.com/rss/search?q=Islamabad+when:7d&hl=en-PK&gl=PK&ceid=PK:en",
@@ -79,6 +80,7 @@ class IslamabadRSSPipeline:
 
     islamabad_keywords = ISLAMABAD_KEYWORDS
     skip_domains = SKIP_DOMAINS
+    embassy_keywords = EMBASSY_KEYWORDS
 
     DATE_META_CANDIDATES = [
         ("meta", {"property": "article:published_time"}),
@@ -102,6 +104,11 @@ class IslamabadRSSPipeline:
     def is_islamabad_related(text):
         lower = text.lower()
         return any(kw in lower for kw in IslamabadRSSPipeline.islamabad_keywords)
+
+    @staticmethod
+    def is_embassy_related(text):
+        lower = text.lower()
+        return any(kw in lower for kw in IslamabadRSSPipeline.embassy_keywords)
 
     @staticmethod
     def parse_date(date_str):
@@ -469,6 +476,12 @@ class IslamabadRSSPipeline:
                         f"Not Islamabad-related (pre-filter), skipping: '{title}'"
                     )
                     return None
+            # if is_embassy_feed:
+            #     if not IslamabadRSSPipeline.is_embassy_related(title + " " + content):
+            #         logger.debug(
+            #             f"Not Embassy-related (pre-filter), skipping: skipping: '{title}'"
+            #         )
+            #         return None
 
             if is_google_news:
                 link = IslamabadRSSPipeline.resolve_google_news_link(raw_link)
@@ -530,6 +543,13 @@ class IslamabadRSSPipeline:
                         f"Not Islamabad-related (post-fetch), skipping: '{title}'"
                     )
                     return None
+
+            # if is_embassy_feed:
+            #     if not IslamabadRSSPipeline.is_embassy_related(title + " " + content):
+            #         logger.debug(
+            #             f"Not Embassy (post-fetch), skipping: '{title}'"
+            #         )
+            #         return None
 
             article = {
                 "id": link,
