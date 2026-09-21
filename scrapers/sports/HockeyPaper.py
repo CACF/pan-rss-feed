@@ -155,7 +155,7 @@ class HockeyPaperScraper:
             }
             return article
         except Exception as e:
-            logger.warning(f"Failed to fetch Hockey Paper article {url}: {e}")
+            logger.debug(f"Failed to fetch Hockey Paper article {url}: {e}")
             return None
 
     @staticmethod

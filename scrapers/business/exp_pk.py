@@ -2,6 +2,7 @@ from config import BUSINESS_TABLE
 import re
 import uuid
 import logging
+import time
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import cloudscraper
@@ -37,15 +38,20 @@ class ExpressUrduBusinessRSSPipeline:
                 chunks.append(text[start:start + MAX_CHARS])
                 start += MAX_CHARS
 
-            translated_chunks = [
-                ExpressUrduBusinessRSSPipeline.TRANSLATOR.translate(chunk)
-                for chunk in chunks
-            ]
+            translated_chunks = []
+            for chunk in chunks:
+                try:
+                    translated = ExpressUrduBusinessRSSPipeline.TRANSLATOR.translate(chunk)
+                    translated_chunks.append(translated)
+                    time.sleep(0.3)
+                except Exception as chunk_err:
+                    logger.debug(f"Chunk translation failed: {chunk_err}")
+                    translated_chunks.append(chunk)
 
             return " ".join(translated_chunks)
 
         except Exception as e:
-            logger.warning(f"Translation failed: {e}")
+            logger.debug(f"Translation failed: {e}")
             return text
 
     @staticmethod

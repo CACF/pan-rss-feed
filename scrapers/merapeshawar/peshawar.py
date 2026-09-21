@@ -33,12 +33,9 @@ class PeshawarRSSPipeline:
         "https://www.dawn.com/feeds/home",
         "https://tribune.com.pk/feed/khyber-pakhtunkhwa",
         "https://peshawarpost.com/category/news/english/news-about-peshawar/feed/",
-        "https://www.dawn.com/feeds/home",
         "https://humenglish.com/pakistan/rss",
         "https://khybernews.tv/category/khyber-pakhtunkhwa/feed/",
         "https://mashriqtv.pk/en/category/peshawar/feed/",
-        # "https://voiceofkp.org/en/feed/",
-        # "https://thefrontierpost.com/category/pakistan/feed/",
     ]
 
     peshawar_keywords = PESHAWAR_KEYWORDS
@@ -557,15 +554,20 @@ class PeshawarRSSPipeline:
         try:
             logger.info(f"Fetching RSS: {feed_url}")
 
-            with cloudscraper.create_scraper() as scraper:
-                response = scraper.get(
-                    feed_url, timeout=30, headers=get_random_headers()
-                )
-                try:
+            try:
+                with cloudscraper.create_scraper() as scraper:
+                    response = scraper.get(
+                        feed_url, timeout=30, headers=get_random_headers()
+                    )
                     response.raise_for_status()
                     payload = response.content
-                finally:
-                    response.close()
+            except Exception:
+                import requests
+                response = requests.get(
+                    feed_url, timeout=30, headers=get_random_headers()
+                )
+                response.raise_for_status()
+                payload = response.content
 
             soup = BeautifulSoup(payload, "lxml-xml")
             items = soup.find_all("item")

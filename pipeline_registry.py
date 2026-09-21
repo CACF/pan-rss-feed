@@ -24,5 +24,5 @@ PIPELINES = [
     HoustonPulsePipeline,
     EntertainmentPipeline,
     MeraPeshawarPipeline,
-    KarachiPipeline
+    KarachiPipeline,
 ]
