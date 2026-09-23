@@ -196,7 +196,7 @@ class PlotistanRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch Plotistan RSS feed: {e}")
+            logger.info(f"Plotistan RSS feed unavailable: {e}")
             return []
 
     # -----------------------------------------------------

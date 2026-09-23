@@ -118,7 +118,7 @@ class FinancialDailyBusinessPipeline:
     def fetch_article(cls, url):
         """Fetch and parse a single article page."""
         try:
-            response = requests.get(url, timeout=8, headers=get_random_headers())
+            response = requests.get(url, timeout=30, headers=get_random_headers())
             try:
                 response.raise_for_status()
                 payload = response.content

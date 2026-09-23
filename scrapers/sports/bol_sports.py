@@ -79,14 +79,8 @@ class BOLNewsSportsRSSPipeline:
 
             soup = BeautifulSoup(html, "html.parser")
             paragraphs = soup.select(
-                ".elementor-widget-theme-post-content p"
-            )
-
-            if not paragraphs:
-                logger.warning(
-                    f"No article body found for URL: {article_url}"
-                )
-                return ""
+                ".elementor-widget-theme-post-content p, article p, .entry-content p, .post-content p"
+            ) or soup.find_all("p")
 
             content_parts = []
             for p in paragraphs:
@@ -109,6 +103,58 @@ class BOLNewsSportsRSSPipeline:
                 f"Failed to scrape full article from {article_url}: {e}"
             )
             return ""
+
+    @staticmethod
+    def scrape_category_page():
+        articles = []
+        try:
+            logger.info("Scraping BOL News Sports category page...")
+            scraper = cloudscraper.create_scraper()
+            res = scraper.get("https://www.bolnews.com/sports/", headers=get_random_headers(), timeout=30)
+            res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "html.parser")
+            raw_links = [
+                a["href"] for a in soup.find_all("a", href=True)
+                if "/sports/" in a["href"] and a["href"].rstrip("/") != "https://www.bolnews.com/sports" and a["href"].rstrip("/") != "/sports"
+            ]
+            unique_links = list(set([
+                "https://www.bolnews.com" + l if l.startswith("/") else l
+                for l in raw_links
+            ]))
+            feed_time = datetime.now(timezone.utc)
+
+            for url in unique_links[:20]:
+                try:
+                    content = BOLNewsSportsRSSPipeline.full_description(url)
+                    if len(content) < 150:
+                        continue
+
+                    slug = url.rstrip("/").split("/")[-1]
+                    title = slug.replace("-", " ").title()
+
+                    articles.append({
+                        "id": url,
+                        "article_id": str(uuid.uuid4()),
+                        "articlePubDate": feed_time,
+                        "feedBuildDate": feed_time,
+                        "title": title,
+                        "authors": "BOL News Sports Desk",
+                        "language": "en-US",
+                        "image": None,
+                        "source": BOLNewsSportsRSSPipeline.SOURCE,
+                        "content": content,
+                        "genre": "Sports",
+                        "media_origin": "local",
+                        "tags": ["sports"],
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed scraping article {url}: {e}")
+
+            logger.info(f"Scraped {len(articles)} articles from BOL News sports page")
+        except Exception as e:
+            logger.info(f"BOL News sports page fallback error: {e}")
+        return articles
 
     @staticmethod
     def fetch_rss_feed(feed_url):
@@ -168,9 +214,6 @@ class BOLNewsSportsRSSPipeline:
                         )
 
                     if len(content) < 150:
-                        logger.info(
-                            f"Skipped article '{title}' (content < 150 chars)"
-                        )
                         continue
 
                     authors = (
@@ -215,8 +258,8 @@ class BOLNewsSportsRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch RSS feed: {e}")
-            return []
+            logger.info(f"BOL Sports RSS fetch failed ({e}). Falling back to HTML scraping...")
+            return BOLNewsSportsRSSPipeline.scrape_category_page()
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):

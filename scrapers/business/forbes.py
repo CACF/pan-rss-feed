@@ -73,14 +73,10 @@ class ForbesRSSPipeline:
                 "Cache-Control": "max-age=0",
             })
 
-            # Step 1: First visit homepage (important for cookies)
-            session.get("https://www.forbes.com/", headers=headers, timeout=30)
-
-            # Small delay to look human
-            time.sleep(1.5)
+            session.get("https://www.forbes.com/", headers=headers, timeout=5)
 
             # Step 2: Visit actual article
-            response = session.get(link, headers=headers, timeout=30)
+            response = session.get(link, headers=headers, timeout=5)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, "lxml")
@@ -113,7 +109,7 @@ class ForbesRSSPipeline:
                 return " ".join(paragraphs)
 
         except Exception as e:
-            logger.warning(f"Failed to fetch full article {link}: {e}")
+            logger.debug(f"Failed to fetch full article {link}: {e}")
 
         return None
 
@@ -160,6 +156,10 @@ class ForbesRSSPipeline:
 
                     content = ForbesRSSPipeline.full_description(link)
                     if not content:
+                        desc_tag = item.find("description") or item.find("content:encoded")
+                        if desc_tag:
+                            content = ForbesRSSPipeline.clean_content(desc_tag.get_text())
+                    if not content or len(content) < 30:
                         continue
 
                     articles.append({

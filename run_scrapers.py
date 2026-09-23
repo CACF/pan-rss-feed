@@ -1,4 +1,5 @@
 import time
+import re
 import logging
 import threading
 import collections
@@ -107,6 +108,37 @@ def run_pipeline_wrapper(pipeline_cls):
         return []
 
 
+def prettify_warning_message(msg: str) -> str:
+    """Clean raw error/exception trace strings into concise, human-readable summaries."""
+    if not msg:
+        return "Unknown Warning"
+
+    msg_lower = str(msg).lower()
+
+    if "read timed out" in msg_lower or "readtimeouterror" in msg_lower:
+        match = re.search(r"timeout=(\d+)", str(msg), re.IGNORECASE)
+        t_val = f" ({match.group(1)}s)" if match else ""
+        return f"HTTP Read Timed Out{t_val}"
+    elif "connecttimedouterror" in msg_lower or "connection timed out" in msg_lower:
+        return "Connection Timed Out"
+    elif "404 client error" in msg_lower or "not found" in msg_lower:
+        return "404 Not Found"
+    elif "403 client error" in msg_lower or "forbidden" in msg_lower:
+        return "403 Access Forbidden"
+    elif "too many requests" in msg_lower or "rate limit" in msg_lower:
+        return "API Rate Limit Exceeded"
+    elif "remotedisconnected" in msg_lower or "connection reset" in msg_lower:
+        return "Server Connection Reset"
+    elif "ssl" in msg_lower or "certificate" in msg_lower:
+        return "SSL Certificate Error"
+
+    clean_msg = re.sub(r"https?://\S+", "", str(msg)).strip()
+    clean_msg = re.sub(r"^Failed to fetch\s*\w*\s*article\s*:?\s*", "", clean_msg, flags=re.IGNORECASE)
+    clean_msg = re.sub(r":\s*:\s*", ": ", clean_msg)
+    clean_msg = re.sub(r"\s+", " ", clean_msg).strip(" :,-")
+    return clean_msg[:75] + ("..." if len(clean_msg) > 75 else "") if clean_msg else "HTTP Request Issue"
+
+
 def main():
     if not PIPELINES:
         print("No pipelines registered or enabled in pipeline_registry.py.")
@@ -187,7 +219,7 @@ def main():
     print(f" Total Execution Time : {total_execution_time} seconds")
     print("=" * 80)
 
-    # Display warnings and log messages grouped by scraper module
+    # Display warnings and log messages grouped by scraper module (prettified)
     if log_buffer.grouped_records:
         print("\n" + "-" * 80)
         print("                  WARNINGS & LOG MESSAGES BY SCRAPER                   ")
@@ -196,8 +228,11 @@ def main():
             count = len(messages)
             plural = "s" if count > 1 else ""
             print(f" {idx}. [{scraper_name}] ({count} Warning{plural} / Issue{plural}):")
-            for msg in messages:
-                print(f"    • {msg}")
+            pretty_messages = [prettify_warning_message(m) for m in messages]
+            msg_counts = collections.Counter(pretty_messages)
+            for p_msg, msg_occ in msg_counts.items():
+                occ_suffix = f" ({msg_occ} articles)" if msg_occ > 1 else ""
+                print(f"    • {p_msg}{occ_suffix}")
 
     print("=" * 80 + "\n")
 

@@ -19,7 +19,7 @@ TABLES = {
     "wafaq": f"{TABLE_PREFIX}",
     "entertainment": f"{TABLE_PREFIX}",
     "merapeshawar": f"{TABLE_PREFIX}",
-    "karachi": f"{TABLE_PREFIX}"
+    "karachi": f"{TABLE_PREFIX}",
 }
 
 # Individual table constants for scrapers importing them directly
@@ -67,8 +67,8 @@ SUPABASE_MERAPESHAWAR_URL = os.getenv("SUPABASE_MERAPESHAWAR_URL", "")
 SUPABASE_MERAPESHAWAR_KEY = os.getenv("SUPABASE_MERAPESHAWAR_KEY", "")
 
 # Karachi Database
-SUPABASE_KARACHI_URL = os.getenv("SUPABASE_KARACHI_URL","")
-SUPABASE_KARACHI_KEY = os.getenv("SUPABASE_KARACHI_KEY","")
+SUPABASE_KARACHI_URL = os.getenv("SUPABASE_KARACHI_URL", "")
+SUPABASE_KARACHI_KEY = os.getenv("SUPABASE_KARACHI_KEY", "")
 
 # ==============================================================================
 # 3. APPLICATION & SERVER CONFIGURATION
