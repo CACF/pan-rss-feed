@@ -37,7 +37,7 @@ class IslamabadRSSPipeline:
     @staticmethod
     def is_embassy_related(text):
         lower = text.lower()
-        return any(kw in lower for kw in EMBASSY_KEYWORDS)
+        return any(kw.lower() in lower for kw in EMBASSY_KEYWORDS)
 
     @staticmethod
     def process_item(
@@ -63,10 +63,10 @@ class IslamabadRSSPipeline:
                     logger.debug(f"Not Islamabad Keywords Related, skipping: '{title}'")
                     return None
             
-            if is_embassy_feed:
-                if not IslamabadRSSPipeline.is_embassy_related(title):
-                    logger.debug(f"Not Embassy Keywords Related, skipping: '{title}'")
-                    return None
+            # if is_embassy_feed:
+            #     if not IslamabadRSSPipeline.is_embassy_related(title):
+            #         logger.debug(f"Not Embassy Keywords Related, skipping: '{title}'")
+            #         return None
 
             raw_link = link_elem.get_text(strip=True)
 
@@ -137,7 +137,7 @@ class IslamabadRSSPipeline:
                 "image": image_url,
                 "source": source,
                 "content": content,
-                "genre": "General News",
+                "genre": "Embassy News" if is_embassy_feed else "General News",
                 "media_origin": "local",
                 "tags": categories,
             }
