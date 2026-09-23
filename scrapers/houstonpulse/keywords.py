@@ -1,0 +1,82 @@
+PAKISTAN_KEYWORDS = [
+    # Pakistan
+    "pakistan",
+    "pakistani",
+    "pakistani-american",
+    "pakistani american",
+    # Cities
+    "karachi",
+    "lahore",
+    "islamabad",
+    "rawalpindi",
+    "peshawar",
+    "quetta",
+    "multan",
+    "faisalabad",
+    "hyderabad",
+    "gilgit",
+    "skardu",
+    # Provinces
+    "punjab",
+    "sindh",
+    "balochistan",
+    "khyber pakhtunkhwa",
+    "kpk",
+    # Languages
+    "urdu",
+    "punjabi",
+    "pashto",
+    "sindhi",
+    "balochi",
+    # Community
+    "pakistani community",
+    "pakistani diaspora",
+    "student association",
+    "pakistani students",
+    "student organization",
+    "international students",
+    # Religion
+    "eid",
+    "eid ul fitr",
+    "eid ul adha",
+    "ramadan",
+    "iftar",
+    "mosque",
+    "islamic center",
+    # Food
+    "biryani",
+    "nihari",
+    "haleem",
+    "karahi",
+    "chapli kebab",
+    "seekh kebab",
+    "pakistani food",
+    # Culture
+    "pakistani culture",
+    "pakistan day",
+    "independence day",
+    "14 august",
+    "basant",
+    # Sports
+    "cricket",
+    "pcb",
+    "psl",
+    # Business
+    "pakistani business",
+    "pakistani entrepreneur",
+    # Education
+    "pakistani students",
+    # Official
+    "pakistan consulate",
+    "consulate of pakistan",
+    # Organizations
+    "pagh",
+    "pakistan association of greater houston",
+    "pakistani american association",
+    "pakistan consulate houston",
+    "consulate general of pakistan",
+    "isgh",
+    "islamic society of greater houston",
+    "pakistani chamber",
+    "pakistan independence celebration",
+]
