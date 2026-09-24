@@ -30,7 +30,7 @@ class PeshawarRSSPipeline:
     """
 
     SOURCE = "Google News"
-    MAX_WORKERS = 8
+    MAX_WORKERS = 3
 
     @staticmethod
     def is_peshawar_related(text):

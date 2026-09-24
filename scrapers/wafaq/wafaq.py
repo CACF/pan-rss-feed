@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class IslamabadRSSPipeline:
     SOURCE = "Google News"
-    MAX_WORKERS = 10
+    MAX_WORKERS = 3
 
     @staticmethod
     def is_islamabad_related(text):

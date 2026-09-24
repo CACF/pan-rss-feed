@@ -30,7 +30,7 @@ class HoustonPulseRSSPipeline:
     """
 
     SOURCE = "Google News"
-    MAX_WORKERS = 8
+    MAX_WORKERS = 3
 
     @staticmethod
     def is_pakistan_related(text):

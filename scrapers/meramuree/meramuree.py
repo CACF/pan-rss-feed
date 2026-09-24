@@ -30,7 +30,7 @@ class PotoharRSSPipeline:
     """
 
     SOURCE = "Google News"
-    MAX_WORKERS = 8
+    MAX_WORKERS = 3
 
     @staticmethod
     def is_potohar_related(text):
