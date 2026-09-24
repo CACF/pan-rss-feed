@@ -60,12 +60,12 @@ class IslamabadRSSPipeline:
             
             if apply_islamabad_filter:
                 if not IslamabadRSSPipeline.is_islamabad_related(title):
-                    logger.debug(f"Not Islamabad Keywords Related, skipping: '{title}'")
+                    logger.debug(f"Not Islamabad Keywords Related, using raw link: '{title}'")
                     return None
             
             # if is_embassy_feed:
             #     if not IslamabadRSSPipeline.is_embassy_related(title):
-            #         logger.debug(f"Not Embassy Keywords Related, skipping: '{title}'")
+            #         logger.debug(f"Not Embassy Keywords Related, using raw link: '{title}'")
             #         return None
 
             raw_link = link_elem.get_text(strip=True)
@@ -73,8 +73,8 @@ class IslamabadRSSPipeline:
             if is_google_news:
                 link = resolve_google_news_link(raw_link)
                 if not link:
-                    logger.debug(f"Could not resolve Google News link, skipping: '{title}'")
-                    return None
+                    logger.debug(f"Could not resolve Google News link, using raw link: '{title}'")
+                    link = raw_link
             else:
                 link = raw_link
 
@@ -123,7 +123,7 @@ class IslamabadRSSPipeline:
 
             if apply_islamabad_filter:
                 if not IslamabadRSSPipeline.is_islamabad_related(title + " " + content):
-                    logger.debug(f"Not Islamabad-related (post-fetch), skipping: '{title}'")
+                    logger.debug(f"Not Islamabad-related (post-fetch), using raw link: '{title}'")
                     return None
 
             article = {
@@ -172,7 +172,7 @@ class IslamabadRSSPipeline:
                         apply_islamabad_filter=True,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             logger.info("── Islamabad, Pakistan — General National Feeds ──")
             for feed_url in GENERAL_NATIONAL_FEEDS:
@@ -185,7 +185,7 @@ class IslamabadRSSPipeline:
                         apply_islamabad_filter=True,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             logger.info("── Islamabad, Pakistan — Embassy  Feeds ──")
             for feed_url in EMBASSY_NEWS_FEEDS:
@@ -199,7 +199,7 @@ class IslamabadRSSPipeline:
                         is_embassy_feed=True,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}

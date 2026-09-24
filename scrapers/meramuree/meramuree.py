@@ -56,7 +56,7 @@ class PotoharRSSPipeline:
 
             title = title_elem.get_text(strip=True)
             if not PotoharRSSPipeline.is_potohar_related(title):
-                logger.debug(f"Not Potohar Keywords Related, skipping: '{title}'")
+                logger.debug(f"Not Potohar Keywords Related, using raw link: '{title}'")
                 return None
 
             raw_link = link_elem.get_text(strip=True)
@@ -65,9 +65,9 @@ class PotoharRSSPipeline:
                 link = resolve_google_news_link(raw_link)
                 if not link:
                     logger.debug(
-                        f"Could not resolve Google News link, skipping: '{title}'"
+                        f"Could not resolve Google News link, using raw link: '{title}'"
                     )
-                    return None
+                    link = raw_link
             else:
                 link = raw_link
 
@@ -117,7 +117,7 @@ class PotoharRSSPipeline:
             if apply_potohar_filter:
                 if not PotoharRSSPipeline.is_potohar_related(title + " " + content):
                     logger.debug(
-                        f"Not Potohar-related (post-fetch), skipping: '{title}'"
+                        f"Not Potohar-related (post-fetch), using raw link: '{title}'"
                     )
                     return None
 
@@ -168,7 +168,7 @@ class PotoharRSSPipeline:
                         genre="General News",
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}

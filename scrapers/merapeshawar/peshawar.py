@@ -57,7 +57,7 @@ class PeshawarRSSPipeline:
 
             if apply_peshawar_filter:
                 if not PeshawarRSSPipeline.is_peshawar_related(title):
-                    logger.debug(f"Not Peshawar Keywords Related, skipping: '{title}'")
+                    logger.debug(f"Not Peshawar Keywords Related, using raw link: '{title}'")
                     return None
 
             raw_link = link_elem.get_text(strip=True)
@@ -66,9 +66,9 @@ class PeshawarRSSPipeline:
                 link = resolve_google_news_link(raw_link)
                 if not link:
                     logger.debug(
-                        f"Could not resolve Google News link, skipping: '{title}'"
+                        f"Could not resolve Google News link, using raw link: '{title}'"
                     )
-                    return None
+                    link = raw_link
             else:
                 link = raw_link
 
@@ -118,7 +118,7 @@ class PeshawarRSSPipeline:
             if apply_peshawar_filter:
                 if not PeshawarRSSPipeline.is_peshawar_related(title + " " + content):
                     logger.debug(
-                        f"Not Peshawar-related (post-fetch), skipping: '{title}'"
+                        f"Not Peshawar-related (post-fetch), using raw link: '{title}'"
                     )
                     return None
 
@@ -168,7 +168,7 @@ class PeshawarRSSPipeline:
                         apply_peshawar_filter=True,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             logger.info("── Peshawar, Pakistan — General National Feeds ──")
             for feed_url in GENERAL_NATIONAL_FEEDS:
@@ -181,7 +181,7 @@ class PeshawarRSSPipeline:
                         apply_peshawar_filter=True,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}

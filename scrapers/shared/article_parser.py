@@ -1,3 +1,4 @@
+import time
 import re
 import logging
 from datetime import datetime, timezone
@@ -277,6 +278,7 @@ def resolve_google_news_link(google_url):
     if "news.google.com" not in google_url:
         return google_url
     try:
+        time.sleep(10)
         result = new_decoderv1(google_url, interval=0)
         if result.get("status"):
             return result.get("decoded_url")

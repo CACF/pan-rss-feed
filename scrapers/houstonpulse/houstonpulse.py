@@ -57,7 +57,7 @@ class HoustonPulseRSSPipeline:
             
             if apply_pakistan_filter:
                 if not HoustonPulseRSSPipeline.is_pakistan_related(title):
-                    logger.debug(f"Not Pakistan Keywords Related, skipping: '{title}'")
+                    logger.debug(f"Not Pakistan Keywords Related, using raw link: '{title}'")
                     return None
 
             raw_link = link_elem.get_text(strip=True)
@@ -65,8 +65,8 @@ class HoustonPulseRSSPipeline:
             if is_google_news:
                 link = resolve_google_news_link(raw_link)
                 if not link:
-                    logger.debug(f"Could not resolve Google News link, skipping: '{title}'")
-                    return None
+                    logger.debug(f"Could not resolve Google News link, using raw link: '{title}'")
+                    link = raw_link
             else:
                 link = raw_link
 
@@ -115,7 +115,7 @@ class HoustonPulseRSSPipeline:
 
             if apply_pakistan_filter:
                 if not HoustonPulseRSSPipeline.is_pakistan_related(title + " " + content):
-                    logger.debug(f"Not Pakistan-related (post-fetch), skipping: '{title}'")
+                    logger.debug(f"Not Pakistan-related (post-fetch), using raw link: '{title}'")
                     return None
 
             article = {
@@ -164,7 +164,7 @@ class HoustonPulseRSSPipeline:
                         apply_pakistan_filter=True,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             logger.info("── Tier 2: Houston local feeds (Pakistan keyword filter) ──")
             for feed_url in HOUSTON_LOCAL_FEEDS:
@@ -177,7 +177,7 @@ class HoustonPulseRSSPipeline:
                         apply_pakistan_filter=False,
                     )
                 )
-                time.sleep(1)
+                time.sleep(10)
 
             if not all_articles:
                 return {"inserted_count": 0, "total_articles": 0}
