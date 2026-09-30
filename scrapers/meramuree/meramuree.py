@@ -176,7 +176,7 @@ class PotoharRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
-            SupabaseClient.delete_old_articles(table_name=target_table)
+            SupabaseClient.delete_old_articles(table_name=target_table, category="meramurree")
 
             return SupabaseClient.insert_system_articles(
                 "meramurree", all_articles, table_name=target_table

@@ -46,7 +46,7 @@ class IslamabadRSSPipeline:
         is_google_news=False,
         apply_islamabad_filter=True,
         is_embassy_feed=False,
-        **kwargs
+        **kwargs,
     ):
         try:
             title_elem = item.find("title")
@@ -57,23 +57,22 @@ class IslamabadRSSPipeline:
                 return None
 
             title = title_elem.get_text(strip=True)
-            
+
             if apply_islamabad_filter:
                 if not IslamabadRSSPipeline.is_islamabad_related(title):
-                    logger.debug(f"Not Islamabad Keywords Related, using raw link: '{title}'")
+                    logger.debug(
+                        f"Not Islamabad Keywords Related, using raw link: '{title}'"
+                    )
                     return None
-            
-            # if is_embassy_feed:
-            #     if not IslamabadRSSPipeline.is_embassy_related(title):
-            #         logger.debug(f"Not Embassy Keywords Related, using raw link: '{title}'")
-            #         return None
 
             raw_link = link_elem.get_text(strip=True)
 
             if is_google_news:
                 link = resolve_google_news_link(raw_link)
                 if not link:
-                    logger.debug(f"Could not resolve Google News link, using raw link: '{title}'")
+                    logger.debug(
+                        f"Could not resolve Google News link, using raw link: '{title}'"
+                    )
                     link = raw_link
             else:
                 link = raw_link
@@ -123,7 +122,9 @@ class IslamabadRSSPipeline:
 
             if apply_islamabad_filter:
                 if not IslamabadRSSPipeline.is_islamabad_related(title + " " + content):
-                    logger.debug(f"Not Islamabad-related (post-fetch), using raw link: '{title}'")
+                    logger.debug(
+                        f"Not Islamabad-related (post-fetch), using raw link: '{title}'"
+                    )
                     return None
 
             article = {
@@ -208,7 +209,9 @@ class IslamabadRSSPipeline:
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
 
-            SupabaseClient.delete_old_articles(table_name=target_table)
+            SupabaseClient.delete_old_articles(
+                table_name=target_table, category="wafaq"
+            )
             logger.info(
                 f"Deleted articles older than 7 days from Supabase table '{target_table}'"
             )

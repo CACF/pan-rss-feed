@@ -190,7 +190,7 @@ class PeshawarRSSPipeline:
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
 
-            SupabaseClient.delete_old_articles(table_name=target_table)
+            SupabaseClient.delete_old_articles(table_name=target_table, category="merapeshawar")
             logger.info(
                 f"Deleted articles older than 7 days from Supabase table '{target_table}'"
             )

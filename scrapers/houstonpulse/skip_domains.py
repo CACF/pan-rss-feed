@@ -17,4 +17,9 @@ SKIP_DOMAINS = {
     "www.newsonair.gov.in",
     "cricinfo.com",
     "www.cricinfo.com",
+    "atlaspress.news",
+    "app.com.pk",
+    "www.app.com.pk",
+    "britannica.com",
+    "www.britannica.com",
 }
