@@ -4,7 +4,7 @@ import uuid
 import logging
 import concurrent.futures
 from datetime import datetime, timezone
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 import requests
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
@@ -93,7 +93,7 @@ class TimesOfKarachiRSSPipeline:
                     cells = [c.get_text(strip=True) for c in row.find_all(["td", "th"])]
                     if cells:
                         rows_text.append(" | ".join(cells))
-                table.replace_with(NavigableStringSafe("; ".join(rows_text)))
+                table.replace_with(NavigableString("; ".join(rows_text)))
 
             text = soup.get_text(separator=" ", strip=True)
 

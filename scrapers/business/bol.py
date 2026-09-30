@@ -91,14 +91,8 @@ class BOLNewsBusinessRSSPipeline:
             soup = BeautifulSoup(html, "html.parser")
 
             paragraphs = soup.select(
-                ".elementor-widget-theme-post-content p"
-            )
-
-            if not paragraphs:
-                logger.warning(
-                    f"No article body found for URL: {article_url}"
-                )
-                return ""
+                ".elementor-widget-theme-post-content p, article p, .entry-content p, .post-content p"
+            ) or soup.find_all("p")
 
             content_parts = []
             for p in paragraphs:
@@ -122,7 +116,57 @@ class BOLNewsBusinessRSSPipeline:
             logger.error(
                 f"Failed to scrape full article from {article_url}: {e}"
             )
-            return ""
+    @staticmethod
+    def scrape_category_page():
+        articles = []
+        try:
+            logger.info("Scraping BOL News Business category page...")
+            scraper = cloudscraper.create_scraper()
+            res = scraper.get("https://www.bolnews.com/business/", headers=get_random_headers(), timeout=30)
+            res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "html.parser")
+            raw_links = [
+                a["href"] for a in soup.find_all("a", href=True)
+                if "/business/" in a["href"] and a["href"].rstrip("/") != "https://www.bolnews.com/business" and a["href"].rstrip("/") != "/business"
+            ]
+            unique_links = list(set([
+                "https://www.bolnews.com" + l if l.startswith("/") else l
+                for l in raw_links
+            ]))
+            feed_time = datetime.now(timezone.utc)
+
+            for url in unique_links[:20]:
+                try:
+                    content = BOLNewsBusinessRSSPipeline.full_description(url)
+                    if len(content) < 150:
+                        continue
+
+                    slug = url.rstrip("/").split("/")[-1]
+                    title = slug.replace("-", " ").title()
+
+                    articles.append({
+                        "id": url,
+                        "article_id": str(uuid.uuid4()),
+                        "articlePubDate": feed_time,
+                        "feedBuildDate": feed_time,
+                        "title": title,
+                        "authors": "BOL News Business Desk",
+                        "language": "en-US",
+                        "image": None,
+                        "source": BOLNewsBusinessRSSPipeline.SOURCE,
+                        "content": content,
+                        "genre": "Business",
+                        "media_origin": "local",
+                        "tags": ["business"],
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed scraping article {url}: {e}")
+
+            logger.info(f"Scraped {len(articles)} articles from BOL News business page")
+        except Exception as e:
+            logger.info(f"BOL News business page fallback error: {e}")
+        return articles
 
     @staticmethod
     def fetch_rss_feed(feed_url):
@@ -137,14 +181,14 @@ class BOLNewsBusinessRSSPipeline:
                 )
                 try:
                     response.raise_for_status()
-                    payload = response.content
+                    html_content = response.text
                 finally:
                     response.close()
 
-            soup = BeautifulSoup(payload, "lxml-xml")
+            soup = BeautifulSoup(html_content, "xml")
             items = soup.find_all("item")
-            feed_build_date = datetime.now(timezone.utc)
 
+            feed_build_date = datetime.now(timezone.utc)
             articles = []
 
             for item in items:
@@ -155,7 +199,6 @@ class BOLNewsBusinessRSSPipeline:
                     author_elem = item.find("dc:creator")
                     desc_elem = item.find("description")
                     category_elems = item.find_all("category")
-                    image_elems = None
 
                     if not title_elem or not link_elem:
                         continue
@@ -183,9 +226,6 @@ class BOLNewsBusinessRSSPipeline:
                         )
 
                     if len(content) < 150:
-                        logger.info(
-                            f"Skipped article '{title}' (content < 150 chars)"
-                        )
                         continue
 
                     authors = (
@@ -199,7 +239,6 @@ class BOLNewsBusinessRSSPipeline:
                         for cat in category_elems
                         if cat.get_text(strip=True).lower() != "business"
                     ]
-                    
 
                     article = {
                         "id": link,
@@ -209,16 +248,10 @@ class BOLNewsBusinessRSSPipeline:
                         "title": title,
                         "authors": authors,
                         "language": "en-US",
-                        "image" : image_elems,
+                        "image": None,
                         "source": BOLNewsBusinessRSSPipeline.SOURCE,
                         "content": content,
-                        "genre": (
-                                    "Business"
-                                    if "business" in feed_url.lower()
-                                    else "Sports"
-                                    if "sports" in feed_url.lower()
-                                    else ""
-                                ),
+                        "genre": "Business",
                         "media_origin": "local",
                         "tags": tags,
                     }
@@ -237,8 +270,8 @@ class BOLNewsBusinessRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch RSS feed: {e}")
-            return []
+            logger.info(f"BOL RSS fetch failed ({e}). Falling back to HTML scraping...")
+            return BOLNewsBusinessRSSPipeline.scrape_category_page()
 
     @staticmethod
     def run_pipeline(input_data=None, table_name=None):

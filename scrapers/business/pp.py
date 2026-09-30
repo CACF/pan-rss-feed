@@ -6,6 +6,7 @@ import concurrent.futures
 from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import requests
+import cloudscraper
 from app.utilities import get_random_headers
 from app.utils.supabase_client import SupabaseClient
 
@@ -79,72 +80,129 @@ class ProfitPakistanTodayRSSPipeline:
             return content_html
 
     @staticmethod
+    def scrape_html_page():
+        articles = []
+        try:
+            logger.info("Scraping Profit by Pakistan Today home page...")
+            scraper = cloudscraper.create_scraper()
+            res = scraper.get("https://profit.pakistantoday.com.pk/", timeout=30)
+            res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "html.parser")
+            raw_links = [
+                a["href"] for a in soup.find_all("a", href=True)
+                if "/20" in a["href"]
+            ]
+            unique_links = list(set([
+                "https://profit.pakistantoday.com.pk" + l if l.startswith("/") else l
+                for l in raw_links
+            ]))
+            feed_time = datetime.now(timezone.utc)
+
+            for url in unique_links[:20]:
+                try:
+                    art_res = scraper.get(url, timeout=20)
+                    if art_res.status_code != 200:
+                        continue
+                    art_soup = BeautifulSoup(art_res.text, "html.parser")
+
+                    title_elem = art_soup.find("h1")
+                    title = title_elem.get_text(strip=True) if title_elem else ""
+                    if not title:
+                        continue
+
+                    paragraphs = [
+                        p.get_text(strip=True) for p in art_soup.find_all("p")
+                        if len(p.get_text(strip=True)) > 30 and not any(x in p.get_text().lower() for x in ["copyright", "subscribe", "all rights reserved"])
+                    ]
+                    content = ProfitPakistanTodayRSSPipeline.clean_content(" ".join(paragraphs))
+                    if len(content) < 150:
+                        continue
+
+                    author_elem = art_soup.select_one(".td-post-author-name a, .author a, meta[name='author']")
+                    author = author_elem.get_text(strip=True) if author_elem else "Profit Staff"
+
+                    articles.append({
+                        "id": url,
+                        "article_id": str(uuid.uuid4()),
+                        "articlePubDate": feed_time,
+                        "feedBuildDate": feed_time,
+                        "title": title,
+                        "authors": author,
+                        "language": "en-us",
+                        "source": ProfitPakistanTodayRSSPipeline.SOURCE,
+                        "content": content,
+                        "genre": "Business",
+                        "media_origin": "local",
+                        "tags": [],
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed scraping article {url}: {e}")
+
+            logger.info(f"Scraped {len(articles)} articles from Profit home page")
+        except Exception as e:
+            logger.info(f"Profit home page fallback error: {e}")
+        return articles
+
+    @staticmethod
     def fetch_profit_rss_feed(feed_url):
-        """Fetch and parse a single Profit RSS feed."""
+        """Fetch, parse, and return Profit RSS feed articles."""
         try:
             logger.info(f"Fetching Profit RSS feed: {feed_url}")
             response = requests.get(
-                feed_url, timeout=30, headers=get_random_headers(ProfitPakistanTodayRSSPipeline.headers)
+                feed_url,
+                timeout=30,
+                headers=ProfitPakistanTodayRSSPipeline.headers,
             )
-            try:
-                response.raise_for_status()
-                payload = response.content
-            finally:
-                response.close()
+            response.raise_for_status()
 
+            payload = response.content
             soup = BeautifulSoup(payload, "lxml-xml")
             items = soup.find_all("item")
+
             feed_build_date = datetime.now(timezone.utc)
-
-            if not items:
-                logger.warning(f"No items found in feed: {feed_url}")
-                return []
-
             articles = []
+
             for item in items:
                 try:
-                    title_elem = item.find("title")
-                    link_elem = item.find("link")
-                    desc_elem = item.find("description")
-                    pub_date_elem = item.find("pubDate")
-                    category_elem = item.find("category")
-                    author_elem = item.find("dc:creator")
-                    content_encoded_elem = item.find("content:encoded")
+                    title = item.find("title").get_text(strip=True)
+                    link = item.find("link").get_text(strip=True)
+                    pub_date = item.find("pubDate")
 
-                    if not title_elem or not link_elem:
-                        continue
-
-                    title = title_elem.get_text(strip=True)
-                    link = link_elem.get_text(strip=True)
-                    pub_date = pub_date_elem.get_text(strip=True) if pub_date_elem else ""
-                    category = category_elem.get_text(strip=True) if category_elem else "Business"
-                    author = author_elem.get_text(strip=True) if author_elem else "Profit Desk"
-
-                    content_html = (
-                        content_encoded_elem.get_text() if content_encoded_elem else
-                        (desc_elem.get_text() if desc_elem else "")
+                    article_pub_date = (
+                        ProfitPakistanTodayRSSPipeline.parse_date(pub_date.get_text())
+                        if pub_date
+                        else feed_build_date
                     )
-                    content = ProfitPakistanTodayRSSPipeline.clean_content(content_html)
-                    if len(content) < 200:
-                        logger.info(f"Skipped article '{title}' due to content length < 200 chars")
+
+                    creator = item.find("dc:creator")
+                    author = creator.get_text(strip=True) if creator else "Profit Staff"
+
+                    encoded = item.find("content:encoded")
+                    description = item.find("description")
+
+                    content_raw = (
+                        encoded.get_text()
+                        if encoded
+                        else (description.get_text() if description else "")
+                    )
+
+                    content = ProfitPakistanTodayRSSPipeline.clean_content(content_raw)
+
+                    if len(content) < 150:
                         continue
+
                     article = {
-                        "id": link, 
+                        "id": link,
                         "article_id": str(uuid.uuid4()),
-                        "articlePubDate": ProfitPakistanTodayRSSPipeline.parse_date(pub_date),
+                        "articlePubDate": article_pub_date,
                         "feedBuildDate": feed_build_date,
                         "title": title,
                         "authors": author,
                         "language": "en-us",
                         "source": ProfitPakistanTodayRSSPipeline.SOURCE,
                         "content": content,
-                        "genre":  (
-                                    "Business"
-                                    if "business" in feed_url.lower()
-                                    else "Sports"
-                                    if "sports" in feed_url.lower()
-                                    else ""
-                                ),
+                        "genre": "Business",
                         "media_origin": "local",
                         "tags": [],
                     }
@@ -159,8 +217,8 @@ class ProfitPakistanTodayRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"Failed to fetch Profit RSS feed {feed_url}: {e}")
-            return []
+            logger.info(f"Profit RSS fetch failed ({e}). Falling back to HTML scraping...")
+            return ProfitPakistanTodayRSSPipeline.scrape_html_page()
 
     @staticmethod
     def process_input(input_data=None):

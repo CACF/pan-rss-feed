@@ -189,7 +189,7 @@ class FIHHockeyScraper:
             }
             return article
         except Exception as e:
-            logger.warning(f"Failed to fetch FIH Hockey article {url}: {e}")
+            logger.debug(f"Failed to fetch FIH Hockey article {url}: {e}")
             return None
 
     @classmethod

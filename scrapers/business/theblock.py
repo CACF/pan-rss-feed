@@ -83,17 +83,16 @@ class TheBlockRSSPipeline:
             return None, author
 
         clean_link = link.split("?")[0]
-        amp_link = clean_link.rstrip("/") + "/amp"
 
         try:
-            res = cls.session.get(amp_link, timeout=25)
+            res = cls.session.get(clean_link, timeout=25)
             res.raise_for_status()
 
-            soup = BeautifulSoup(res.text, "lxml")
+            soup = BeautifulSoup(res.text, "html.parser")
 
-            for p in soup.select(".dynamic-content > p"):
+            for p in soup.select("article p, #articleContent p, .articleBody p, .dynamic-content p"):
                 text = p.get_text(strip=True)
-                if len(text) < 40:
+                if len(text) < 30:
                     continue
                 if any(x in text for x in ("©", "The Block", "All rights reserved")):
                     continue
@@ -102,12 +101,12 @@ class TheBlockRSSPipeline:
             if paragraphs:
                 content = " ".join(paragraphs)
 
-            author_elem = soup.select_one("div.bylines a")
+            author_elem = soup.select_one("div.bylines a, .authorByName a, .byline a")
             if author_elem:
                 author = author_elem.get_text(strip=True)
 
         except Exception as e:
-            logger.warning(f"Article scrape failed {amp_link}: {e}")
+            logger.info(f"Article scrape fallback for {clean_link}: {e}")
 
         return content, author
 
@@ -141,6 +140,10 @@ class TheBlockRSSPipeline:
 
                 content, author = cls.full_description(link)
                 if not content:
+                    desc_tag = item.find("description") or item.find("content:encoded")
+                    if desc_tag:
+                        content = cls.clean_content(BeautifulSoup(desc_tag.get_text(), "html.parser").get_text())
+                if not content or len(content) < 50:
                     continue
 
                 articles.append(

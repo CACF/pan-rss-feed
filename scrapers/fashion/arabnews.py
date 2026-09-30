@@ -138,6 +138,63 @@ class ArabNewsFashionRSSPipeline:
             return ""
 
     # -----------------------------
+    # HTML PAGE SCRAPER (FALLBACK)
+    # -----------------------------
+    @staticmethod
+    def scrape_lifestyle_page():
+        articles = []
+        try:
+            logger.info("Scraping ArabNews PK lifestyle page...")
+            scraper = cloudscraper.create_scraper()
+            res = scraper.get("https://www.arabnews.pk/lifestyle", headers=get_random_headers(), timeout=30)
+            res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "html.parser")
+            raw_links = [
+                a["href"] for a in soup.find_all("a", href=True)
+                if ("/lifestyle/" in a["href"] or "/fashion/" in a["href"]) and a["href"].split("-")[-1].isdigit()
+            ]
+            unique_links = list(set(raw_links))
+            feed_time = datetime.now(timezone.utc)
+
+            for rel_link in unique_links:
+                full_url = "https://www.arabnews.pk" + rel_link if rel_link.startswith("/") else rel_link
+                try:
+                    content_html = ArabNewsFashionRSSPipeline.fetch_article_content(full_url)
+                    content = ArabNewsFashionRSSPipeline.clean_text(content_html)
+                    if len(content) < 150:
+                        continue
+
+                    # Extract title from link or page
+                    slug = rel_link.split("/")[-1].rsplit("-", 1)[0]
+                    title = slug.replace("-", " ").title()
+
+                    articles.append(
+                        {
+                            "id": full_url,
+                            "article_id": str(uuid.uuid4()),
+                            "articlePubDate": feed_time,
+                            "feedBuildDate": feed_time,
+                            "title": title,
+                            "authors": "Arab News",
+                            "language": "en-US",
+                            "image": None,
+                            "source": ArabNewsFashionRSSPipeline.SOURCE,
+                            "content": content,
+                            "genre": "Fashion",
+                            "media_origin": "local",
+                            "tags": ["fashion", "lifestyle"],
+                        }
+                    )
+                except Exception as e:
+                    logger.debug(f"Failed scraping article {full_url}: {e}")
+
+            logger.info(f"Scraped {len(articles)} articles from ArabNews lifestyle page")
+        except Exception as e:
+            logger.info(f"ArabNews lifestyle page fallback error: {e}")
+        return articles
+
+    # -----------------------------
     # RSS FETCH
     # -----------------------------
     @staticmethod
@@ -180,9 +237,6 @@ class ArabNewsFashionRSSPipeline:
                         pub_date_elem.get_text() if pub_date_elem else None
                     )
 
-                    # =========================
-                    # IMPORTANT FIX HERE
-                    # =========================
                     content_html = ArabNewsFashionRSSPipeline.fetch_article_content(
                         link_text
                     )
@@ -219,8 +273,8 @@ class ArabNewsFashionRSSPipeline:
             return articles
 
         except Exception as e:
-            logger.error(f"RSS fetch failed: {e}")
-            return []
+            logger.info(f"RSS fetch failed ({e}). Falling back to HTML scraping...")
+            return ArabNewsFashionRSSPipeline.scrape_lifestyle_page()
 
     # -----------------------------
     # RUN

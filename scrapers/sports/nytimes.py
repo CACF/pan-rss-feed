@@ -48,7 +48,7 @@ class NYTSoccerRSSPipeline:
             response = scraper.get(
                 url,
                 headers=get_random_headers(),
-                timeout=30,
+                timeout=5,
             )
             response.raise_for_status()
 
@@ -106,7 +106,7 @@ class NYTSoccerRSSPipeline:
             return {"title": title, "content": content, "authors": authors_str}
 
         except Exception as e:
-            logger.warning(f"Article fetch failed: {url} | {e}")
+            logger.debug(f"Article fetch fallback for {url}: {e}")
             return None
 
     # -----------------------------
@@ -171,8 +171,8 @@ class NYTSoccerRSSPipeline:
                             desc = item.find("description")
                             content = desc.text if desc else ""
 
-                        if len(content) < 200:
-                            logger.info(f"Content too short, skipping: {link}")
+                        if len(content) < 50:
+                            logger.debug(f"Content too short, skipping: {link}")
                             continue
 
                         logger.info(f"Parsed article: {title}")
