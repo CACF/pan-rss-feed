@@ -100,7 +100,7 @@ class PotoharRSSPipeline:
                 content = full["content"]
 
             image_url = full["image"]
-            pub_date = full["published"] or rss_pub_date
+            pub_date = rss_pub_date or full["published"]
 
             seen = set()
             categories = []
@@ -122,7 +122,8 @@ class PotoharRSSPipeline:
                     return None
 
             article = {
-                "id": link,
+                "id": raw_link,
+                "link": link,
                 "article_id": str(uuid.uuid4()),
                 "articlePubDate": pub_date,
                 "feedBuildDate": feed_build_date,
@@ -176,7 +177,9 @@ class PotoharRSSPipeline:
             all_articles = list({a["id"]: a for a in all_articles}.values())
 
             logger.info(f"After dedupe: {len(all_articles)} total articles")
-            SupabaseClient.delete_old_articles(table_name=target_table, category="meramurree")
+            SupabaseClient.delete_old_articles(
+                table_name=target_table, category="meramurree"
+            )
 
             return SupabaseClient.insert_system_articles(
                 "meramurree", all_articles, table_name=target_table

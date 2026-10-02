@@ -176,6 +176,7 @@ def site_specific_cleanup(container, domain):
 def clean_article_text(text):
     if not text:
         return ""
+
     patterns = [
         r"Published:\s*.*?(?=\n|$)",
         r"Updated:\s*.*?(?=\n|$)",
@@ -186,7 +187,19 @@ def clean_article_text(text):
         r"\(AP Photo.*?\)",
         r"Photo by.*?(?=\n|$)",
         r"Image courtesy.*?(?=\n|$)",
+        r"See more of our coverage in your search results\.?",
     ]
+    # patterns = [
+    #     r"Published:\s*.*?(?=\n|$)",
+    #     r"Updated:\s*.*?(?=\n|$)",
+    #     r"Last Updated.*?(?=\n|$)",
+    #     r"By\s+[A-Z][A-Za-z\s]+(?=\n|$)",
+    #     r"Copyright\s+\d{4}.*?All rights reserved\.?",
+    #     r"©\s*\d{4}.*?All rights reserved\.?",
+    #     r"\(AP Photo.*?\)",
+    #     r"Photo by.*?(?=\n|$)",
+    #     r"Image courtesy.*?(?=\n|$)",
+    # ]
     for pattern in patterns:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
     return " ".join(text.split())
