@@ -54,14 +54,6 @@ class HoustonPulseRSSPipeline:
                 return None
 
             title = title_elem.get_text(strip=True)
-
-            # if apply_pakistan_filter:
-            #     if not HoustonPulseRSSPipeline.is_pakistan_related(title):
-            #         logger.debug(
-            #             f"Not Pakistan Keywords Related, using raw link: '{title}'"
-            #         )
-            #         return None
-
             raw_link = link_elem.get_text(strip=True)
 
             if is_google_news:
@@ -103,7 +95,7 @@ class HoustonPulseRSSPipeline:
                 content = full["content"]
 
             image_url = full["image"]
-            pub_date = full["published"] or rss_pub_date
+            pub_date = rss_pub_date or full["published"]
 
             seen = set()
             categories = []
@@ -127,7 +119,8 @@ class HoustonPulseRSSPipeline:
                     return None
 
             article = {
-                "id": link,
+                "id": raw_link,
+                "link": link,
                 "article_id": str(uuid.uuid4()),
                 "articlePubDate": pub_date,
                 "feedBuildDate": feed_build_date,

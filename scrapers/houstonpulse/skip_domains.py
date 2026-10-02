@@ -22,4 +22,6 @@ SKIP_DOMAINS = {
     "www.app.com.pk",
     "britannica.com",
     "www.britannica.com",
+    "www.wvasfm.org",
+    "www.tribuneindia.com"
 }

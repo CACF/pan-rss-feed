@@ -101,7 +101,7 @@ class PeshawarRSSPipeline:
                 content = full["content"]
 
             image_url = full["image"]
-            pub_date = full["published"] or rss_pub_date
+            pub_date = rss_pub_date or full["published"]
 
             seen = set()
             categories = []
@@ -123,7 +123,8 @@ class PeshawarRSSPipeline:
                     return None
 
             article = {
-                "id": link,
+                "id": raw_link,
+                "link": link,
                 "article_id": str(uuid.uuid4()),
                 "articlePubDate": pub_date,
                 "feedBuildDate": feed_build_date,

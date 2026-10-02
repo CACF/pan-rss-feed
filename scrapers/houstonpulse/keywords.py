@@ -1,8 +1,4 @@
 PAKISTAN_KEYWORDS = [
-    # Pakistan-related news
-    "pakistan",
-    "pakistani",
-    "pakistanis",
     # Pakistani-American identity and diaspora
     "pakistani american",
     "pakistani-american",
