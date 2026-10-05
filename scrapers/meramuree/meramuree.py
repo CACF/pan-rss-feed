@@ -18,7 +18,7 @@ from scrapers.shared.article_parser import (
 from scrapers.shared.http_client import fetch_rss_feed
 
 from .keywords import POTOHAR_KEYWORDS
-from .feeds import GOOGLE_NEWS_FEEDS
+from .feeds import GOOGLE_NEWS_FEEDS, LOCAL_RSS_FEEDS
 from .skip_domains import SKIP_DOMAINS
 
 logger = logging.getLogger(__name__)
@@ -165,6 +165,20 @@ class PotoharRSSPipeline:
                         process_item_func=PotoharRSSPipeline.process_item,
                         max_workers=PotoharRSSPipeline.MAX_WORKERS,
                         is_google_news=True,
+                        apply_potohar_filter=True,
+                        genre="General News",
+                    )
+                )
+                time.sleep(10)
+
+            logger.info("──Tier-2 Local Feeds ──")
+            for feed_url in LOCAL_RSS_FEEDS:
+                all_articles.extend(
+                    fetch_rss_feed(
+                        feed_url=feed_url,
+                        process_item_func=PotoharRSSPipeline.process_item,
+                        max_workers=PotoharRSSPipeline.MAX_WORKERS,
+                        is_google_news=False,
                         apply_potohar_filter=True,
                         genre="General News",
                     )

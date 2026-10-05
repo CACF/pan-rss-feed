@@ -179,7 +179,7 @@ class PeshawarRSSPipeline:
                         process_item_func=PeshawarRSSPipeline.process_item,
                         max_workers=PeshawarRSSPipeline.MAX_WORKERS,
                         is_google_news=False,
-                        apply_peshawar_filter=True,
+                        apply_peshawar_filter=False,
                     )
                 )
                 time.sleep(10)

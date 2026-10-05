@@ -21,4 +21,12 @@ SKIP_DOMAINS = {
     "www.newsonair.gov.in",
     "cricinfo.com",
     "www.cricinfo.com",
+    "www.kabulnow.com",
+    "kabulnow.com",
+    "en.yenisafak.com",
+    "www.millenniumpost.in",
+    "tennews.in",
+    "www.tennews.in",
+    "www.greaterkashmir.com",
+    "greaterkashmir.com",
 }
