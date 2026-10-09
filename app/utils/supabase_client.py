@@ -86,41 +86,48 @@ class SupabaseClient:
     """Utility class responsible for inserting, upserting, and deleting articles in Supabase."""
 
     @staticmethod
-    def _upsert_articles(cleaned: list, table_name: str, client, max_retries: int = 3):
-        if not cleaned or not client:
-            return {"inserted_count": 0, "total_articles": 0}
+    def _upsert_articles(cleaned: list, table_name: str, client):
+        if not cleaned:
+            return {"inserted_count": 0}
 
-        batch_size = 50
-        total_inserted = 0
+        try:
+            # 1. Ask Database for existing Titles and Sources
+            existing_response = (
+                client.table(table_name).select("title, source").execute()
+            )
 
-        for i in range(0, len(cleaned), batch_size):
-            batch = cleaned[i : i + batch_size]
-            for attempt in range(max_retries):
-                try:
-                    client.table(table_name).upsert(batch, on_conflict="id").execute()
-                    total_inserted += len(batch)
-                    break
-                except Exception as e:
-                    err_str = str(e)
-                    if "PGRST204" in err_str or "Could not find the" in err_str:
-                        for item in batch:
-                            item.pop("articlePubDate", None)
-                        try:
-                            client.table(table_name).upsert(
-                                batch, on_conflict="id"
-                            ).execute()
-                            total_inserted += len(batch)
-                            break
-                        except Exception as retry_e:
-                            e = retry_e
-                    if attempt == max_retries - 1:
-                        logger.error(
-                            f"Supabase upsert failed after {max_retries} attempts: {e}"
-                        )
-                        raise e
-                    time.sleep(0.5)
+            # Create a unique list of existing "Title_Source" combinations
+            existing_records = set()
+            if existing_response.data:
+                for row in existing_response.data:
+                    # Combine Title and Source into one plain text string
+                    unique_key = f"{row['title'].strip()}_{row['source'].strip()}"
+                    existing_records.add(unique_key)
 
-        return {"inserted_count": total_inserted, "total_articles": len(cleaned)}
+            # 2. Filter the list: ONLY keep articles whose Title_Source is NOT in the database
+            new_articles = []
+            for article in cleaned:
+                unique_key = f"{article['title'].strip()}_{article['source'].strip()}"
+                if unique_key not in existing_records:
+                    new_articles.append(article)
+
+            # 3. If everything is already in the DB, skip inserting!
+            if not new_articles:
+                logger.info(f"No new articles for '{table_name}'. Skipped inserting.")
+                return {"inserted_count": 0, "total_articles": len(cleaned)}
+
+            # 4. Insert ONLY the brand-new articles
+            response = client.table(table_name).upsert(new_articles).execute()
+            inserted_count = len(response.data) if response.data else 0
+
+            logger.info(
+                f"Successfully inserted {inserted_count} NEW articles into '{table_name}'"
+            )
+            return {"inserted_count": inserted_count, "total_articles": len(cleaned)}
+
+        except Exception as e:
+            logger.error(f"Failed to insert articles into '{table_name}': {e}")
+            return {"inserted_count": 0, "error": str(e)}
 
     @staticmethod
     def insert_articles(
